@@ -7,7 +7,7 @@
 #### optional 1 - use elasticsearch-plugin to install
 
 ```shell script
-./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v1.0.0/elasticsearch-script-velocity-1.0.0.zip
+./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v1.0.0/elasticsearch-script-velocity-1.0.zip
 ```
 #### optional 2 - download pre-build package from here: https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases
 
