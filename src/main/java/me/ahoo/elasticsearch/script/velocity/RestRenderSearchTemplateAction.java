@@ -28,23 +28,30 @@ import org.elasticsearch.rest.action.RestToXContentListener;
 import org.elasticsearch.script.ScriptType;
 
 import java.io.IOException;
+import java.util.List;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
 public class RestRenderSearchTemplateAction extends BaseRestHandler {
 
-    public RestRenderSearchTemplateAction(RestController controller) {
-        controller.registerHandler(GET, "/_render/velocity_template", this);
-        controller.registerHandler(POST, "/_render/velocity_template", this);
-        controller.registerHandler(GET, "/_render/velocity_template/{id}", this);
-        controller.registerHandler(POST, "/_render/velocity_template/{id}", this);
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+                new Route(GET, "/_render/velocity_template"),
+                new Route(POST, "/_render/velocity_template"),
+                new Route(GET, "/_render/velocity_template/{id}"),
+                new Route(POST, "/_render/velocity_template/{id}")));
     }
 
     @Override
     public String getName() {
         return "render_search_velocity_template_action";
     }
+
+
 
     @Override
     public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {

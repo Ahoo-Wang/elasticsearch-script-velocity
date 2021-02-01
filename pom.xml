@@ -6,10 +6,10 @@
 
     <groupId>me.ahoo.elasticsearch</groupId>
     <artifactId>elasticsearch-script-velocity</artifactId>
-    <version>1.0</version>
+    <version>${elasticsearch.version}</version>
     <description>velocity on elasticsearch</description>
     <properties>
-        <elasticsearch.version>7.6.0</elasticsearch.version>
+        <elasticsearch.version>7.10.2</elasticsearch.version>
         <maven.compiler.target>1.8</maven.compiler.target>
         <elasticsearch.plugin.name>elasticsearch-script-velocity</elasticsearch.plugin.name>
         <elasticsearch.plugin.classname>me.ahoo.elasticsearch.script.velocity.VelocityPlugin</elasticsearch.plugin.classname>

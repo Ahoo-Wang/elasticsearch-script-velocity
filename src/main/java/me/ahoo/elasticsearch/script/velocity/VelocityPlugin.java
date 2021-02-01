@@ -44,8 +44,8 @@ public class VelocityPlugin extends Plugin implements ScriptPlugin, ActionPlugin
                                              IndexScopedSettings indexScopedSettings, SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
                                              Supplier<DiscoveryNodes> nodesInCluster) {
         return Arrays.asList(
-                new RestSearchTemplateAction(restController),
-                new RestMultiSearchTemplateAction(settings, restController),
-                new RestRenderSearchTemplateAction(restController));
+                new RestSearchTemplateAction(),
+                new RestMultiSearchTemplateAction(settings),
+                new RestRenderSearchTemplateAction());
     }
 }

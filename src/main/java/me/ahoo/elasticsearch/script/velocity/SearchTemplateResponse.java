@@ -33,7 +33,7 @@ import java.io.InputStream;
 import java.util.Map;
 
 public class SearchTemplateResponse extends ActionResponse implements StatusToXContentObject {
-    public static ParseField TEMPLATE_OUTPUT_FIELD = new ParseField("template_output");
+    public static final ParseField TEMPLATE_OUTPUT_FIELD = new ParseField("template_output");
 
     /** Contains the source of the rendered template **/
     private BytesReference source;
