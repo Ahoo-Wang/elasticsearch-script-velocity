@@ -25,20 +25,20 @@ public class VelocityExecutableScript extends TemplateScript {
     public VelocityExecutableScript(Template template, Map<String, Object> params) {
         super(params);
         this.template = template;
-        velocityContext = new VelocityContext(new HashMap<>(params));
+        this.velocityContext = new VelocityContext(params);
     }
 
     @SneakyThrows
     @Override
     public String execute() {
-        final StringWriter writer = new StringWriter();
-        try {
+        try (final StringWriter writer = new StringWriter()) {
             // crazy reflection here
             SpecialPermission.check();
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 template.merge(velocityContext, writer);
                 return null;
             });
+            return writer.toString();
         } catch (Exception e) {
             String errMsg = e.getMessage();
             if (Objects.isNull(errMsg)) {
@@ -47,7 +47,5 @@ public class VelocityExecutableScript extends TemplateScript {
             List<String> errorStack = Arrays.stream(e.getStackTrace()).map(stackTraceElement -> stackTraceElement.toString()).collect(Collectors.toList());
             throw new ScriptException(errMsg, e, errorStack, template.getName(), VelocityScriptEngine.NAME);
         }
-
-        return writer.toString();
     }
 }
