@@ -71,7 +71,7 @@ public class RestMultiSearchTemplateAction extends BaseRestHandler {
 
     @Override
     public String getName() {
-        return "multi_search_template_action";
+        return "multi_search_velocity_template_action";
     }
 
     @Override
