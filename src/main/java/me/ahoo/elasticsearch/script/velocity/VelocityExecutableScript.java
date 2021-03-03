@@ -25,7 +25,10 @@ public class VelocityExecutableScript extends TemplateScript {
     public VelocityExecutableScript(Template template, Map<String, Object> params) {
         super(params);
         this.template = template;
-        this.velocityContext = new VelocityContext(params);
+        /**
+         * Warning: params is UnmodifiableMap
+         */
+        this.velocityContext = new VelocityContext(new HashMap<>(params));
     }
 
     @SneakyThrows
