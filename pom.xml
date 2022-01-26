@@ -14,7 +14,7 @@
         <elasticsearch.plugin.name>elasticsearch-script-velocity</elasticsearch.plugin.name>
         <elasticsearch.plugin.classname>me.ahoo.elasticsearch.script.velocity.VelocityPlugin</elasticsearch.plugin.classname>
         <elasticsearch.plugin.jvm>true</elasticsearch.plugin.jvm>
-        <log4j.version>2.11.1</log4j.version>
+        <log4j.version>2.16.0</log4j.version>
         <velocity.version>2.2</velocity.version>
     </properties>
     <dependencies>
