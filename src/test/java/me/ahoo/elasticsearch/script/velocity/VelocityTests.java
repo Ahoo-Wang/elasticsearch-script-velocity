@@ -1,6 +1,5 @@
 package me.ahoo.elasticsearch.script.velocity;
 
-import lombok.var;
 import org.apache.velocity.Template;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
@@ -14,7 +13,6 @@ import java.util.HashMap;
 
 /**
  * @author ahoo wang
- * Creation time 2021/2/1 16:51
  **/
 public class VelocityTests {
     private static final VelocityEngine engine;
