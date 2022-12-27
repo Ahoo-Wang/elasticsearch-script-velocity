@@ -20,25 +20,32 @@ import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
 
 import java.io.StringWriter;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class VelocityExecutableScript extends TemplateScript {
-
+    
     private final Template template;
     private final VelocityContext velocityContext;
-
+    
     public VelocityExecutableScript(Template template, Map<String, Object> params) {
         super(params);
         this.template = template;
         velocityContext = new VelocityContext(new HashMap<>(params));
     }
-
+    
+    @SuppressWarnings("removal")
     @Override
     public String execute() {
         final StringWriter writer = new StringWriter();
+        SpecialPermission.check();
         try {
-            template.merge(velocityContext, writer);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                template.merge(velocityContext, writer);
+                return null;
+            });
         } catch (Exception e) {
             String errMsg = e.getMessage();
             if (Objects.isNull(errMsg)) {
@@ -47,7 +54,7 @@ public class VelocityExecutableScript extends TemplateScript {
             List<String> errorStack = Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.toList());
             throw new ScriptException(errMsg, e, errorStack, template.getName(), VelocityScriptEngine.NAME);
         }
-
+        
         return writer.toString();
     }
 }

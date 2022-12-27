@@ -28,11 +28,11 @@ java {
 }
 
 dependencies {
-    implementation("org.elasticsearch:elasticsearch:${project.properties["elasticsearchVersion"]}")
+    compileOnly("org.elasticsearch:elasticsearch:${project.properties["elasticsearchVersion"]}")
     implementation("org.apache.velocity:velocity-engine-core:2.3")
-    testImplementation("junit:junit:4.13.2") {
+    yamlRestTestRuntimeOnly("junit:junit:4.13.2") {
         exclude("org.hamcrest")
     }
-    testImplementation("org.hamcrest:hamcrest:2.2")
+    yamlRestTestRuntimeOnly("org.hamcrest:hamcrest:2.2")
     yamlRestTestRuntimeOnly("org.apache.logging.log4j:log4j-core:2.19.0")
 }

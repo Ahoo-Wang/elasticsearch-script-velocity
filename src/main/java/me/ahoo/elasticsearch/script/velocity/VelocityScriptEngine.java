@@ -20,11 +20,14 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.StringResourceLoader;
 import org.apache.velocity.runtime.resource.util.StringResourceRepository;
 import org.apache.velocity.runtime.resource.util.StringResourceRepositoryImpl;
+import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptEngine;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -34,12 +37,17 @@ public class VelocityScriptEngine implements ScriptEngine {
     private final VelocityEngine velocityEngine;
     private final StringResourceRepository stringResourceRepository;
     
+    @SuppressWarnings("removal")
     public VelocityScriptEngine() {
-        velocityEngine = new VelocityEngine();
-        velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADERS, "string");
-        velocityEngine.setProperty("resource.loader.string.class", StringResourceLoader.class.getName());
-        velocityEngine.setProperty("resource.loader.string.repository.class", StringResourceRepositoryImpl.class.getName());
-        velocityEngine.init();
+        SpecialPermission.check();
+        velocityEngine = AccessController.doPrivileged((PrivilegedAction<VelocityEngine>) () -> {
+            final VelocityEngine engine = new VelocityEngine();
+            engine.setProperty(RuntimeConstants.RESOURCE_LOADERS, "string");
+            engine.setProperty("resource.loader.string.class", StringResourceLoader.class.getName());
+            engine.setProperty("resource.loader.string.repository.class", StringResourceRepositoryImpl.class.getName());
+            engine.init();
+            return engine;
+        });
         stringResourceRepository = StringResourceLoader.getRepository();
     }
     
