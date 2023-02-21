@@ -34,5 +34,5 @@ dependencies {
         exclude("org.hamcrest")
     }
     yamlRestTestRuntimeOnly("org.hamcrest:hamcrest:2.2")
-    yamlRestTestRuntimeOnly("org.apache.logging.log4j:log4j-core:2.19.0")
+    yamlRestTestRuntimeOnly("org.apache.logging.log4j:log4j-core:2.20.0")
 }
