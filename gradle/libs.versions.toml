@@ -1,0 +1,22 @@
+[versions]
+# libraries
+elasticsearch = "8.11.0"
+velocity = "2.3"
+junit = "4.13.2"
+hamcrest = "2.2"
+log4j = "2.21.1"
+
+# plugins
+
+
+[libraries]
+elasticsearch = { module = "org.elasticsearch:elasticsearch", version.ref = "elasticsearch" }
+velocity = { module = "org.apache.velocity:velocity-engine-core", version.ref = "velocity" }
+junit = { module = "junit:junit", version.ref = "junit" }
+hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
+log4j = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+
+[plugins]
+
+
+

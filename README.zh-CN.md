@@ -1,22 +1,25 @@
 # Velocity for Elasticsearch
 
-## Install
+## 安装
 
-> optional 1 - use elasticsearch-plugin to install
+> 方式 1 - 使用 `elasticsearch-plugin `安装
 
 ```shell script
-./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v7.10.2/elasticsearch-script-velocity-7.10.2.zip
+./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v8.11.0/elasticsearch-script-velocity-8.11.0.zip
 ```
-> optional 2 - download pre-build package from here: [Releases](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)
 
-1. create plugin folder `cd your-es-root/plugins/ && mkdir elasticsearch-script-velocity`
-2. unzip plugin to folder `your-es-root/plugins/elasticsearch-script-velocity`
+> 方式 2 - 从 [Releases](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases) 下载构建包
 
-## Use
+1. 创建插件目录 `cd your-es-root/plugins/ && mkdir elasticsearch-script-velocity`
+2. 解压到该目录 `your-es-root/plugins/elasticsearch-script-velocity`
 
-### Store script
+## 使用
+
+### 存储脚本
 
 [create-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/create-stored-script-api.html)
+
+```http request
 
 ```http request
 POST _scripts/templateid
@@ -33,7 +36,8 @@ POST _scripts/templateid
     }
 }
 ```
-### Get Stored Script
+
+### 获取已存储的脚本
 
 [get-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/get-stored-script-api.html)
 
@@ -41,23 +45,23 @@ POST _scripts/templateid
 GET _scripts/templateid
 ```
 
-> Response:
+> 请求响应结果：
 
 ```json
 {
-  "_id" : "templateid",
-  "found" : true,
-  "script" : {
-    "lang" : "velocity",
-    "source" : """{"query":{"match":{"title":"$query_string"}}}""",
-    "options" : {
-      "content_type" : "application/json; charset=UTF-8"
+  "_id": "templateid",
+  "found": true,
+  "script": {
+    "lang": "velocity",
+    "source": """{"query":{"match":{"title":"$query_string"}}}""",
+    "options": {
+      "content_type": "application/json;charset=utf-8"
     }
   }
 }
 ```
 
-### Delete a stored script
+### 删除已存储的脚本
 
 [delete-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/delete-stored-script-api.html)
 
@@ -65,21 +69,21 @@ GET _scripts/templateid
 DELETE _scripts/templateid
 ```
 
-### Search template
+### 模板搜索
 
 [search-template](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-template.html)
 
 ```http request
 GET _search/template
 {
-    "id": "templateid", 
+    "id": "templateid",
     "params": {
         "query_string": "search for these words"
     }
 }
 ```
 
-### Validating a search template
+### 验证搜索模板
 
 ```http request
 GET _render/template/templateid
@@ -90,14 +94,14 @@ GET _render/template/templateid
 }
 ```
 
-> Response:
+> 请求响应结果：
 
 ```json
 {
-  "template_output" : {
-    "query" : {
-      "match" : {
-        "title" : "search for these words"
+  "template_output": {
+    "query": {
+      "match": {
+        "title": "search for these words"
       }
     }
   }
