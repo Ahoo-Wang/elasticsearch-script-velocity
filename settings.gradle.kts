@@ -5,6 +5,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.elasticsearch.gradle:build-tools:8.6.2")
+        classpath("org.elasticsearch.gradle:build-tools:8.11.0")
     }
 }
