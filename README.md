@@ -13,7 +13,7 @@ By introducing *Velocity* into *Elasticsearch*, support for any conditional stat
 > optional 1 - use elasticsearch-plugin to install
 
 ```shell script
-./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v7.10.2/elasticsearch-script-velocity-7.10.2.zip
+./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v8.11.0/elasticsearch-script-velocity-8.11.0.zip
 ```
 > optional 2 - download pre-build package from here: [Releases](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)
 
