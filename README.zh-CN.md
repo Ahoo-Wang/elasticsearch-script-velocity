@@ -1,5 +1,13 @@
 # Velocity for Elasticsearch
 
+*Search Template* 是 *Elasticsearch* 中一项非常实用的功能。通过这一特性，搜索请求的查询结构可以事先定义好，然后在实际请求时传入搜索参数。这样既使得请求体更加简洁，也避免了在客户端拼接查询结构时可能出现的错误。
+
+在需要进行搜索调优时，可以直接在 *Elasticsearch* 服务端修改搜索脚本，而无需重新发布客户端。这显著提高了搜索调优的效率。
+
+然而，*Elasticsearch* [默认支持的脚本语言](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-scripting.html#scripting-available-languages)（`mustache`/`painless`/`expression`）的语法逻辑相对较为有限，不支持逻辑判断，从而对 *Search Template* 的使用带来了一定的限制。
+
+通过引入 *Velocity* 到 *Elasticsearch* 中，可以支持任何逻辑判断，使得 *Search Template* 的使用更加灵活。这为用户提供了更强大、更灵活的搜索定制能力。
+
 ## 安装
 
 > 方式 1 - 使用 `elasticsearch-plugin `安装
@@ -18,8 +26,6 @@
 ### 存储脚本
 
 [create-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/create-stored-script-api.html)
-
-```http request
 
 ```http request
 POST _scripts/templateid

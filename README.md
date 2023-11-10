@@ -1,5 +1,13 @@
 # Velocity for Elasticsearch
 
+*Search Template* is a highly valuable feature in Elasticsearch. It allows the pre-definition of the query structure for search requests, with the ability to pass search parameters during the actual request. This not only makes the request body more concise but also helps avoid errors that may occur when concatenating query structures on the client side.
+
+When search optimization is necessary, modifications to search scripts can be made directly on the Elasticsearch server without the need to redeploy the client. This significantly enhances the efficiency of search optimization.
+
+However, the [default scripting languages](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-scripting.html#scripting-available-languages) (`mustache`/`painless`/`expression`) supported by *Elasticsearch* have relatively limited syntax logic, lacking support for any conditional statements. This imposes significant constraints on the use of *Search Template*.
+
+By introducing *Velocity* into *Elasticsearch*, support for any conditional statements is enabled, making the usage of *Search Template* more flexible. This provides users with greater customization capabilities for powerful and flexible searches.
+
 ## Install
 
 > optional 1 - use elasticsearch-plugin to install
