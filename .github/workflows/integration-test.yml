@@ -30,4 +30,4 @@ jobs:
           settings-path: ${{ github.workspace }}
 
       - name: Test
-        run: gradle clean check --stacktrace
+        run: ./gradlew clean check --stacktrace
