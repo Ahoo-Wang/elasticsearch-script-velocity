@@ -18,6 +18,8 @@ By introducing *Velocity* into *Elasticsearch*, support for any conditional stat
 ## Install
 
 > optional 1 - use elasticsearch-plugin to install
+> 
+> Tip: Replace [version] in the link with your Elasticsearch version
 
 ```shell script
 ./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v[version]/elasticsearch-script-velocity-[version].zip

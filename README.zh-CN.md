@@ -17,7 +17,9 @@
 
 ## 安装
 
-> 方式 1 - 使用 `elasticsearch-plugin `安装
+> 方式 1 - 使用 `elasticsearch-plugin `安装.
+> 
+> Tip: 将链接中的 [version] 替换为你的 Elasticsearch 版本号
 
 ```shell script
 ./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v[version]/elasticsearch-script-velocity-[version].zip

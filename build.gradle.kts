@@ -4,12 +4,14 @@ plugins {
     jacoco
     id("me.champeau.jmh") version "0.7.2"
 }
-
+val elasticVersion = properties["elastic.version"] as String
+val pluginVersion = properties["plugin.version"] as String
+version = "${elasticVersion}-${pluginVersion}"
 esplugin {
     name = "elasticsearch-script-velocity"
     description = "Elasticsearch Script Plugin for Velocity"
     classname = "me.ahoo.elasticsearch.script.velocity.VelocityPlugin"
-    version = properties["version"] as String
+    version = version
     licenseFile = rootProject.file("LICENSE")
 }
 
@@ -25,7 +27,7 @@ java {
 }
 
 dependencies {
-    compileOnly(libs.elasticsearch)
+    compileOnly("org.elasticsearch:elasticsearch:${elasticVersion}")
     implementation(libs.velocity)
     yamlRestTestRuntimeOnly(libs.junit.jupiter.api)
     yamlRestTestRuntimeOnly(libs.hamcrest)
@@ -33,8 +35,8 @@ dependencies {
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.junit.jupiter.params)
     testRuntimeOnly(libs.junit.jupiter.engine)
-    jmh("org.openjdk.jmh:jmh-core:1.37")
-    jmh("org.openjdk.jmh:jmh-generator-annprocess:1.37")
+    jmh(libs.jmh.core)
+    jmh(libs.jmh.generator.annprocess)
 }
 
 tasks.test {
