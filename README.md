@@ -1,5 +1,8 @@
 # Velocity for Elasticsearch
 
+[![codecov](https://codecov.io/gh/Ahoo-Wang/elasticsearch-script-velocity/graph/badge.svg?token=QK8XZXHBZN)](https://codecov.io/gh/Ahoo-Wang/elasticsearch-script-velocity)
+[![GitHub release](https://img.shields.io/github/release/Ahoo-Wang/elasticsearch-script-velocity.svg)](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)
+
 *Search Template* is a highly valuable feature in Elasticsearch. It allows the pre-definition of the query structure for search requests, with the ability to pass search parameters during the actual request. This not only makes the request body more concise but also helps avoid errors that may occur when concatenating query structures on the client side.
 
 When search optimization is necessary, modifications to search scripts can be made directly on the Elasticsearch server without the need to redeploy the client. This significantly enhances the efficiency of search optimization.

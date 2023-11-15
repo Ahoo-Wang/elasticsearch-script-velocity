@@ -18,6 +18,7 @@ import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.exception.VelocityException;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.StringResourceLoader;
+import org.apache.velocity.runtime.resource.util.StringResource;
 import org.apache.velocity.runtime.resource.util.StringResourceRepository;
 import org.apache.velocity.runtime.resource.util.StringResourceRepositoryImpl;
 import org.elasticsearch.SpecialPermission;
@@ -36,7 +37,7 @@ public class VelocityScriptEngine implements ScriptEngine {
     public static final String NAME = "velocity";
     private final VelocityEngine velocityEngine;
     private final StringResourceRepository stringResourceRepository;
-    
+
     @SuppressWarnings("removal")
     public VelocityScriptEngine() {
         SpecialPermission.check();
@@ -50,20 +51,20 @@ public class VelocityScriptEngine implements ScriptEngine {
         });
         stringResourceRepository = StringResourceLoader.getRepository();
     }
-    
+
     @Override
     public String getType() {
         return NAME;
     }
-    
+
     @Override
     public <FactoryType> FactoryType compile(String name, String code, ScriptContext<FactoryType> context, Map<String, String> params) {
         if (!context.instanceClazz.equals(TemplateScript.class)) {
             throw new IllegalArgumentException("velocity engine does not know how to handle context [" + context.name + "]");
         }
-        
+
         try {
-            stringResourceRepository.putStringResource(name, code);
+            ensureResource(name, code);
             Template template = velocityEngine.getTemplate(name);
             TemplateScript.Factory compiled = _params -> new VelocityExecutableScript(template, _params);
             return context.factoryClazz.cast(compiled);
@@ -71,7 +72,15 @@ public class VelocityScriptEngine implements ScriptEngine {
             throw new ScriptException(ex.getMessage(), ex, Collections.emptyList(), code, NAME);
         }
     }
-    
+
+    private void ensureResource(String name, String code) {
+        StringResource resource = stringResourceRepository.getStringResource(name);
+        if (resource != null && resource.getBody().equals(code)) {
+            return;
+        }
+        stringResourceRepository.putStringResource(name, code);
+    }
+
     @Override
     public Set<ScriptContext<?>> getSupportedContexts() {
         return Collections.singleton(TemplateScript.CONTEXT);

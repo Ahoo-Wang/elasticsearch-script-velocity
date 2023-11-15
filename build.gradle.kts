@@ -1,6 +1,7 @@
 plugins {
     id("elasticsearch.esplugin")
     id("elasticsearch.yaml-rest-test")
+    jacoco
 }
 
 esplugin {
@@ -30,4 +31,14 @@ dependencies {
     }
     yamlRestTestRuntimeOnly(libs.hamcrest)
     yamlRestTestRuntimeOnly(libs.log4j)
+}
+
+tasks.test {
+    finalizedBy(tasks.jacocoTestReport)
+}
+tasks.jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+    dependsOn(tasks.test)
 }

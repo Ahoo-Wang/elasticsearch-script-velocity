@@ -1,5 +1,8 @@
 # Velocity for Elasticsearch
 
+[![codecov](https://codecov.io/gh/Ahoo-Wang/elasticsearch-script-velocity/graph/badge.svg?token=QK8XZXHBZN)](https://codecov.io/gh/Ahoo-Wang/elasticsearch-script-velocity)
+[![GitHub release](https://img.shields.io/github/release/Ahoo-Wang/elasticsearch-script-velocity.svg)](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)
+
 *Search Template* 是 *Elasticsearch* 中一项非常实用的功能。通过这一特性，搜索请求的查询结构可以事先定义好，然后在实际请求时传入搜索参数。这样既使得请求体更加简洁，也避免了在客户端拼接查询结构时可能出现的错误。
 
 在需要进行搜索调优时，可以直接在 *Elasticsearch* 服务端修改搜索脚本，而无需重新发布客户端。这显著提高了搜索调优的效率。
