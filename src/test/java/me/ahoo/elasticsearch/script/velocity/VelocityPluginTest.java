@@ -1,7 +1,7 @@
 package me.ahoo.elasticsearch.script.velocity;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -15,6 +15,6 @@ public class VelocityPluginTest {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        Assert.assertNotNull(scriptEngine);
+        Assertions.assertNotNull(scriptEngine);
     }
 }

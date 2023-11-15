@@ -3,8 +3,8 @@ package me.ahoo.elasticsearch.script.velocity;
 import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,10 +15,13 @@ import java.util.Map;
 
 public class VelocityScriptEngineTest {
     private final VelocityScriptEngine velocityScriptEngine = (VelocityScriptEngine) new VelocityPlugin().getScriptEngine(null, null);
-    private static final String PRODUCT_SEARCH_TEMPLATE = "product_search";
+    private static final String PRODUCT_SEARCH_TEMPLATE_NAME = "product_search";
+    private static final String PRODUCT_SEARCH_TEMPLATE_CONTENT = getSearchTemplate();
+    private final TemplateScript.Factory PRODUCT_SEARCH_FACTORY = velocityScriptEngine
+            .compile(PRODUCT_SEARCH_TEMPLATE_NAME, PRODUCT_SEARCH_TEMPLATE_CONTENT, TemplateScript.CONTEXT, Collections.emptyMap());
 
     private static String getSearchTemplate() {
-        try (InputStream inputStream = VelocityScriptEngineTest.class.getClassLoader().getResourceAsStream(PRODUCT_SEARCH_TEMPLATE + ".vm")) {
+        try (InputStream inputStream = VelocityScriptEngineTest.class.getClassLoader().getResourceAsStream(PRODUCT_SEARCH_TEMPLATE_NAME + ".vm")) {
             return new String(inputStream.readAllBytes(), Charset.defaultCharset());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -27,16 +30,14 @@ public class VelocityScriptEngineTest {
 
     @Test
     public void getType() {
-        Assert.assertEquals(velocityScriptEngine.getType(), VelocityScriptEngine.NAME);
+        Assertions.assertEquals(velocityScriptEngine.getType(), VelocityScriptEngine.NAME);
     }
 
     @Test
     public void compile() {
-        String code = getSearchTemplate();
-        org.elasticsearch.script.TemplateScript.Factory factory = velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE, code, TemplateScript.CONTEXT, Collections.emptyMap());
-        Assert.assertNotNull(factory);
-        org.elasticsearch.script.TemplateScript.Factory factory2 = velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE, code, TemplateScript.CONTEXT, Collections.emptyMap());
-        Assert.assertNotNull(factory2);
+        String code = PRODUCT_SEARCH_TEMPLATE_CONTENT;
+        org.elasticsearch.script.TemplateScript.Factory factory = velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE_NAME, code, TemplateScript.CONTEXT, Collections.emptyMap());
+        Assertions.assertNotNull(factory);
     }
 
     @Test
@@ -44,9 +45,9 @@ public class VelocityScriptEngineTest {
         String code = "#if";
 
         try {
-            velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE, code, new ScriptContext<>("error", WrongFactoryType.class), Collections.emptyMap());
+            velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE_NAME, code, new ScriptContext<>("error", WrongFactoryType.class), Collections.emptyMap());
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof IllegalArgumentException);
+            Assertions.assertTrue(e instanceof IllegalArgumentException);
         }
     }
 
@@ -55,22 +56,16 @@ public class VelocityScriptEngineTest {
         String code = "#if";
 
         try {
-            velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE, code, TemplateScript.CONTEXT, Collections.emptyMap());
+            velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE_NAME, code, TemplateScript.CONTEXT, Collections.emptyMap());
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ScriptException);
+            Assertions.assertTrue(e instanceof ScriptException);
         }
     }
 
     @Test
-    public void executeScript() {
-        String code = getSearchTemplate();
-        org.elasticsearch.script.TemplateScript.Factory factory = velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE, code, TemplateScript.CONTEXT, Collections.emptyMap());
-        var params = new HashMap<String, Object>();
-        params.put("from", 0);
-        params.put("size", 10);
-        var templateScript = factory.newInstance(params);
-        var templateOutput = templateScript.execute();
-        Assert.assertEquals(templateOutput, "    {\n" +
+    public void executeSearchTemplateScript() {
+        var templateOutput = executeSearchTemplate();
+        Assertions.assertEquals(templateOutput, "    {\n" +
                 "      \"from\": 0,\n" +
                 "      \"size\": 10,\n" +
                 "      \"track_total_hits\": true,\n" +
@@ -87,23 +82,31 @@ public class VelocityScriptEngineTest {
                 "    }");
     }
 
+    public String executeSearchTemplate() {
+        var params = new HashMap<String, Object>();
+        params.put("from", 0);
+        params.put("size", 10);
+        var templateScript = PRODUCT_SEARCH_FACTORY.newInstance(params);
+        return templateScript.execute();
+    }
+
     @Test
     public void executeScriptWhenScriptException() {
         String code = "$params.throwError()";
-        org.elasticsearch.script.TemplateScript.Factory factory = velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE, code, TemplateScript.CONTEXT, Collections.emptyMap());
+        org.elasticsearch.script.TemplateScript.Factory factory = velocityScriptEngine.compile(PRODUCT_SEARCH_TEMPLATE_NAME, code, TemplateScript.CONTEXT, Collections.emptyMap());
         var params = new HashMap<String, Object>();
         params.put("params", new Params());
         var templateScript = factory.newInstance(params);
         try {
             templateScript.execute();
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ScriptException);
+            Assertions.assertTrue(e instanceof ScriptException);
         }
     }
 
     @Test
     public void getSupportedContexts() {
-        Assert.assertEquals(velocityScriptEngine.getSupportedContexts(), Collections.singleton(TemplateScript.CONTEXT));
+        Assertions.assertEquals(velocityScriptEngine.getSupportedContexts(), Collections.singleton(TemplateScript.CONTEXT));
     }
 
     public static class Params {
