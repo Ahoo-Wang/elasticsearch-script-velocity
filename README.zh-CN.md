@@ -11,12 +11,16 @@
 
 通过引入 *Velocity* 到 *Elasticsearch* 中，可以支持任何逻辑判断，使得 *Search Template* 的使用更加灵活。这为用户提供了更强大、更灵活的搜索定制能力。
 
+## 版本约定
+
+> version = `elasticsearchVersion`-`pluginVersion`
+
 ## 安装
 
 > 方式 1 - 使用 `elasticsearch-plugin `安装
 
 ```shell script
-./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v8.11.0/elasticsearch-script-velocity-8.11.0.zip
+./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v[version]/elasticsearch-script-velocity-[version].zip
 ```
 
 > 方式 2 - 从 [Releases](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases) 下载构建包

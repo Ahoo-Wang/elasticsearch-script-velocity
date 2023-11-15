@@ -11,12 +11,16 @@ However, the [default scripting languages](https://www.elastic.co/guide/en/elast
 
 By introducing *Velocity* into *Elasticsearch*, support for any conditional statements is enabled, making the usage of *Search Template* more flexible. This provides users with greater customization capabilities for powerful and flexible searches.
 
+## Version Convention
+
+> version = `elasticsearchVersion`-`pluginVersion`
+
 ## Install
 
 > optional 1 - use elasticsearch-plugin to install
 
 ```shell script
-./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v8.11.0/elasticsearch-script-velocity-8.11.0.zip
+./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v[version]/elasticsearch-script-velocity-[version].zip
 ```
 > optional 2 - download pre-build package from here: [Releases](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)
 
