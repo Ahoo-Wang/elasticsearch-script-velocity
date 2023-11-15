@@ -66,7 +66,7 @@ public class VelocityScriptEngine implements ScriptEngine {
         try {
             ensureResource(name, code);
             Template template = velocityEngine.getTemplate(name);
-            TemplateScript.Factory compiled = _params -> new VelocityExecutableScript(template, _params);
+            TemplateScript.Factory compiled = new VelocityExecutableScriptFactory(template);
             return context.factoryClazz.cast(compiled);
         } catch (VelocityException ex) {
             throw new ScriptException(ex.getMessage(), ex, Collections.emptyList(), code, NAME);
@@ -84,5 +84,19 @@ public class VelocityScriptEngine implements ScriptEngine {
     @Override
     public Set<ScriptContext<?>> getSupportedContexts() {
         return Collections.singleton(TemplateScript.CONTEXT);
+    }
+
+    public static class VelocityExecutableScriptFactory implements TemplateScript.Factory {
+        private final Template template;
+
+        public VelocityExecutableScriptFactory(Template template) {
+            this.template = template;
+        }
+
+        @Override
+        public TemplateScript newInstance(Map<String, Object> params) {
+            return new VelocityExecutableScript(template, params);
+        }
+
     }
 }

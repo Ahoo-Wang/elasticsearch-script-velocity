@@ -114,3 +114,10 @@ GET _render/template/templateid
   }
 }
 ```
+
+## Benchmark
+
+```
+Benchmark                                             Mode  Cnt        Score   Error  Units
+VelocityScriptEngineBenchmark.executeSearchTemplate  thrpt       1020003.447          ops/s
+```
