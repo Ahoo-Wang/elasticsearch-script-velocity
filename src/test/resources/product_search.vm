@@ -1,0 +1,279 @@
+    {
+      "from": $from,
+      "size": $size,
+      "track_total_hits": true,
+      "sort":
+      [
+        #if($sortBy=="PRICE_ASC")
+        {"price": {"order": "asc"}}
+        #end
+        #if($sortBy=="PRICE_DESC")
+        {"price": {"order": "desc"}}
+        #end
+        #if($sortBy=="CREATE_TIME_ASC")
+        {"id": {"order": "asc"}}
+        #end
+        #if($sortBy=="CREATE_TIME_DESC")
+        {"id": {"order": "desc"}}
+        #end
+        #if($sortBy=="DEFAULT")
+        {"_score": {"order": "desc"}}
+        #end
+        ],
+        "query": {
+          "bool": {
+            "filter": [
+              {     "term": {       "deleted": 0     }   }
+              #if($shopId)
+              ,{
+                "term": {
+                  "shopId": "$shopId"
+                }
+              }
+              #end
+              #if($shopName)
+              ,{
+                "term": {
+                  "shopName.keyword": "$shopName"
+                }
+              }
+              #end
+              #if($brandName)
+              , {
+                "nested": {
+                  "path": "brand",
+                  "query": {
+                    "bool": {
+                      "filter": [
+                        {"match": {
+                          "brand.brandName": "$brandName"
+                        }}
+                        ]
+                    }
+                  }
+                }
+              }
+              #end
+              #if($brandIds)
+              , {
+                "nested": {
+                  "path": "brand",
+                  "query": {
+                    "bool": {
+                      "filter": [
+                        {
+                          "terms": {
+                            "brand.id": [
+                              #foreach($brandId in $brandIds)
+                              "$brandId"
+                              #if($foreach.hasNext),#end
+                              #end
+                              ]
+                          }
+                        }
+                        ]
+                    }
+                  }
+                }
+              }
+              #end
+              #if($categoryCode)
+              , {
+                "nested": {
+                  "path": "category",
+                  "query": {
+                    "prefix": {
+                      "category.categoryCode": {
+                        "value": "$categoryCode"
+                      }
+                    }
+                  }
+                }
+              }
+              #end
+              #if($status)
+              ,{
+                "term": {
+                  "status": "$status"
+                }
+              }
+              #end
+              #if($similarProductTag)
+              ,{
+                "match": {
+                  "similarProductTags": "$similarProductTag"
+                }
+              }
+              #end
+              #if($id)
+              ,{
+                "term": {
+                  "id": "$id"
+                }
+              }
+              #end
+              #if($ids)
+              , {
+                "terms": {
+                  "id": [
+                    #foreach($id in $ids)
+                    "$id"
+                    #if($foreach.hasNext),#end
+                    #end
+                    ]
+                }
+              }
+              #end
+              #if($priceStart)
+              ,{
+                "range": {
+                  "price": {
+                    "gte": $priceStart
+                  }
+                }
+              }
+              #end
+              #if($priceEnd)
+              ,{
+                "range": {
+                  "price": {
+                    "lte": $priceEnd
+                  }
+                }
+              }
+              #end
+              #if($qualityDateStart)
+              ,{
+                "range": {
+                  "qualityDate": {
+                    "gte": $qualityDateStart
+                  }
+                }
+              }
+              #end
+              #if($qualityDateEnd)
+              ,{
+                "range": {
+                  "qualityDate": {
+                    "lte": $qualityDateEnd
+                  }
+                }
+              }
+              #end
+              #if($availableSaleInventoryStart!=$null)
+              ,{
+                "script": {
+                  "script": {
+                    "source": "(doc['productInventory'].value-doc['waitDeliveryInventory'].value)>=params.availableSaleInventoryStart",
+                    "params":{
+                      "availableSaleInventoryStart":$availableSaleInventoryStart
+                    },
+                    "lang": "painless"
+                  }
+                }
+              }
+              #end
+              #if($availableSaleInventoryEnd)
+              ,{
+                "script": {
+                  "script": {
+                    "source": "(doc['productInventory'].value-doc['waitDeliveryInventory'].value)<=params.availableSaleInventoryEnd",
+                    "params":{
+                      "availableSaleInventoryEnd":$availableSaleInventoryEnd
+                    },
+                    "lang": "painless"
+                  }
+                }
+              }
+              #end
+              ]
+              #if($keywords)
+              ,"must": [
+                {
+                  "dis_max": {
+                    "boost": 1.2,
+                    "queries": [
+                      {
+                        "term": {
+                          "productOrderNo.keyword": {
+                            "value": "$keywords",
+                            "boost": 50
+                          }
+                        }
+                      },
+                      {
+                        "wildcard": {
+                          "productOrderNo.keyword": {
+                            "value":"*$keywords*",
+                            "boost": 20
+                          }
+                        }
+                      },
+                      {
+                        "wildcard": {
+                          "productModel.keyword": {
+                            "value":"*$keywords*",
+                            "boost": 20
+                          }
+                        }
+                      },
+                      {
+                        "match": {
+                          "productName": {
+                    "query": "FOTEK 阳明 MS-06 磁块",
+                    "boost": 30
+                  }
+                          "$keywords"
+                        }
+                      },
+                      {
+                        "match": {
+                          "productModel": {
+                            "query":"$keywords",
+                            "boost": 10
+                          }
+                        }
+                      },
+                      {
+                        "term": {
+                          "productModel.keyword": {
+                            "value": "$keywords",
+                            "boost": 30
+                          }
+                        }
+                      },
+                      {
+                        "nested": {
+                          "path": "brand",
+                          "query": {
+                            "bool": {
+                              "should": [
+                                {
+                                  "term": {
+                                    "brand.brandName.keyword": {
+                                      "value": "$keywords",
+                                      "boost": 30
+                                    }
+                                  }
+                                },
+                                {
+                                  "match": {
+                                    "brand.brandName": {
+                                      "query": "$keywords",
+                                      "boost": 20
+                                    }
+                                  }
+                                }
+                                ]
+                            }
+                          }
+                        }
+                      }
+                      ]
+                  }
+                }
+                ]
+                #end
+          }
+        }
+    }
