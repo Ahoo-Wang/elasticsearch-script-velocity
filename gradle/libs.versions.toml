@@ -3,7 +3,7 @@
 velocity = "2.3"
 junit = "5.10.1"
 hamcrest = "2.2"
-log4j = "2.21.1"
+log4j = "2.22.0"
 jmh = "1.37"
 # plugins
 
