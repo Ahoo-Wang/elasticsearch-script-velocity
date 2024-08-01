@@ -2,7 +2,7 @@
 # libraries
 velocity = "2.3"
 junit = "5.10.3"
-hamcrest = "2.2"
+hamcrest = "3.0"
 log4j = "2.23.1"
 jmh = "1.37"
 # plugins
