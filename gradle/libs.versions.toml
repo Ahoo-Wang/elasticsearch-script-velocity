@@ -1,7 +1,7 @@
 [versions]
 # libraries
 velocity = "2.3"
-junit = "5.10.3"
+junit = "5.11.0"
 hamcrest = "3.0"
 log4j = "2.23.1"
 jmh = "1.37"
