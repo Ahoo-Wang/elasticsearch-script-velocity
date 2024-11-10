@@ -1,6 +1,6 @@
 [versions]
 # libraries
-velocity = "2.4"
+velocity = "2.4.1"
 junit = "5.11.3"
 hamcrest = "3.0"
 log4j = "2.24.1"
