@@ -2,7 +2,7 @@ plugins {
     id("elasticsearch.esplugin")
     id("elasticsearch.yaml-rest-test")
     jacoco
-    id("me.champeau.jmh") version "0.7.2"
+    id("me.champeau.jmh") version "0.7.3"
 }
 val elasticVersion = properties["elastic.version"] as String
 val pluginVersion = properties["plugin.version"] as String
