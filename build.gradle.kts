@@ -27,14 +27,17 @@ java {
 }
 
 dependencies {
+    testImplementation(platform(libs.junit.bom))
+    yamlRestTestRuntimeOnly(platform(libs.junit.bom))
     compileOnly("org.elasticsearch:elasticsearch:${elasticVersion}")
     implementation(libs.velocity)
-    yamlRestTestRuntimeOnly(libs.junit.jupiter.api)
+    yamlRestTestRuntimeOnly("org.junit.jupiter:junit-jupiter-api")
     yamlRestTestRuntimeOnly(libs.hamcrest)
     yamlRestTestRuntimeOnly(libs.log4j)
-    testImplementation(libs.junit.jupiter.api)
-    testImplementation(libs.junit.jupiter.params)
-    testRuntimeOnly(libs.junit.jupiter.engine)
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     jmh(libs.jmh.core)
     jmh(libs.jmh.generator.annprocess)
 }

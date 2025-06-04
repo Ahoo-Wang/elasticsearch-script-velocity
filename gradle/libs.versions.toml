@@ -1,7 +1,7 @@
 [versions]
 # libraries
 velocity = "2.4.1"
-junit = "5.11.4"
+junit = "5.13.0"
 hamcrest = "3.0"
 log4j = "2.24.3"
 jmh = "1.37"
@@ -9,9 +9,7 @@ jmh = "1.37"
 
 [libraries]
 velocity = { module = "org.apache.velocity:velocity-engine-core", version.ref = "velocity" }
-junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
-junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 log4j = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
