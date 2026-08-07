@@ -21,7 +21,6 @@ import org.apache.velocity.runtime.resource.loader.StringResourceLoader;
 import org.apache.velocity.runtime.resource.util.StringResource;
 import org.apache.velocity.runtime.resource.util.StringResourceRepository;
 import org.apache.velocity.runtime.resource.util.StringResourceRepositoryImpl;
-import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptEngine;
 import org.elasticsearch.script.ScriptException;
@@ -40,7 +39,6 @@ public class VelocityScriptEngine implements ScriptEngine {
 
     @SuppressWarnings("removal")
     public VelocityScriptEngine() {
-        SpecialPermission.check();
         velocityEngine = AccessController.doPrivileged((PrivilegedAction<VelocityEngine>) () -> {
             final VelocityEngine engine = new VelocityEngine();
             engine.setProperty(RuntimeConstants.RESOURCE_LOADERS, "string");

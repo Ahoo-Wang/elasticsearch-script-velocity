@@ -15,7 +15,6 @@ package me.ahoo.elasticsearch.script.velocity;
 
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
-import org.elasticsearch.SpecialPermission;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
 
@@ -40,7 +39,6 @@ public class VelocityExecutableScript extends TemplateScript {
     @Override
     public String execute() {
         final StringWriter writer = new StringWriter();
-        SpecialPermission.check();
         try {
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 template.merge(velocityContext, writer);
