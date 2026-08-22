@@ -220,10 +220,9 @@
                       {
                         "match": {
                           "productName": {
-                    "query": "FOTEK 阳明 MS-06 磁块",
-                    "boost": 30
-                  }
-                          "$keywords"
+                            "query": "$keywords",
+                            "boost": 30
+                          }
                         }
                       },
                       {
