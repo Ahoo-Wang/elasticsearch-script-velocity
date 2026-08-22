@@ -20,7 +20,7 @@ Elasticsearch script plugin that adds [Velocity](https://velocity.apache.org/) a
 ./gradlew jmh -PjmhIncludes=VelocityScriptEngineBenchmark   # optional: -PjmhThreads=N -PjmhMode=thrpt
 ```
 
-Java 17 toolchain. Build uses Elasticsearch `build-tools` (`elasticsearch.esplugin` Gradle plugin) declared in `settings.gradle.kts` buildscript.
+Java 21 toolchain (Elasticsearch 9.x requires JVM 21+). Build uses Elasticsearch `build-tools` (`elasticsearch.esplugin` Gradle plugin) declared in `settings.gradle.kts` buildscript.
 
 ## Version & Release Convention
 
