@@ -1,6 +1,5 @@
 plugins {
     id("elasticsearch.esplugin")
-    id("elasticsearch.yaml-rest-test")
     jacoco
     id("me.champeau.jmh") version "0.7.3"
 }
@@ -28,12 +27,8 @@ java {
 
 dependencies {
     testImplementation(platform(libs.junit.bom))
-    yamlRestTestRuntimeOnly(platform(libs.junit.bom))
     compileOnly("org.elasticsearch:elasticsearch:${elasticVersion}")
     implementation(libs.velocity)
-    yamlRestTestRuntimeOnly("org.junit.jupiter:junit-jupiter-api")
-    yamlRestTestRuntimeOnly(libs.hamcrest)
-    yamlRestTestRuntimeOnly(libs.log4j)
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("org.junit.jupiter:junit-jupiter-params")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
