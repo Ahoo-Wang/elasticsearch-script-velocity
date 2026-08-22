@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin'
           server-id: github
           settings-path: ${{ github.workspace }}
 
@@ -38,4 +38,3 @@ jobs:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
           files: ./build/reports/jacoco/test/jacocoTestReport.xml
-          path_to_write_report: ./coverage/codecov_report.txt
