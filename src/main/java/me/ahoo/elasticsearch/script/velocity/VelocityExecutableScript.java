@@ -22,7 +22,6 @@ import java.io.StringWriter;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class VelocityExecutableScript extends TemplateScript {
     
@@ -49,8 +48,7 @@ public class VelocityExecutableScript extends TemplateScript {
             if (Objects.isNull(errMsg)) {
                 errMsg = "Error running " + template.getName();
             }
-            List<String> errorStack = Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.toList());
-            throw new ScriptException(errMsg, e, errorStack, template.getName(), VelocityScriptEngine.NAME);
+            throw new ScriptException(errMsg, e, Collections.emptyList(), template.getName(), VelocityScriptEngine.NAME);
         }
         
         return writer.toString();

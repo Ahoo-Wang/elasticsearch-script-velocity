@@ -18,6 +18,7 @@ import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.exception.VelocityException;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.StringResourceLoader;
+import org.apache.velocity.util.introspection.SecureUberspector;
 import org.apache.velocity.runtime.resource.util.StringResource;
 import org.apache.velocity.runtime.resource.util.StringResourceRepository;
 import org.apache.velocity.runtime.resource.util.StringResourceRepositoryImpl;
@@ -41,6 +42,7 @@ public class VelocityScriptEngine implements ScriptEngine {
     public VelocityScriptEngine() {
         velocityEngine = AccessController.doPrivileged((PrivilegedAction<VelocityEngine>) () -> {
             final VelocityEngine engine = new VelocityEngine();
+            engine.setProperty(RuntimeConstants.UBERSPECT_CLASSNAME, SecureUberspector.class.getName());
             engine.setProperty(RuntimeConstants.RESOURCE_LOADERS, "string");
             engine.setProperty("resource.loader.string.class", StringResourceLoader.class.getName());
             engine.setProperty("resource.loader.string.repository.class", StringResourceRepositoryImpl.class.getName());

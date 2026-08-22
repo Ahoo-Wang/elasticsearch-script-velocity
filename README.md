@@ -129,3 +129,8 @@ GET _render/template/templateid
 Benchmark                                             Mode  Cnt        Score   Error  Units
 VelocityScriptEngineBenchmark.executeSearchTemplate  thrpt       1020003.447          ops/s
 ```
+## Security
+
+Templates are executed with Velocity's [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html): method calls on sensitive classes such as `java.lang.Class`, `java.lang.ClassLoader`, `java.lang.Runtime`, and `java.lang.System` are blocked, so templates cannot escape into arbitrary JVM code.
+
+Velocity templates are still Turing-complete, so only grant stored-script write access (`PUT _scripts`) to trusted parties — the same trust level you apply to cluster administration.
