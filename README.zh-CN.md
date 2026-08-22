@@ -131,3 +131,8 @@ GET _render/template/templateid
 Benchmark                                             Mode  Cnt        Score   Error  Units
 VelocityScriptEngineBenchmark.executeSearchTemplate  thrpt       1020003.447          ops/s
 ```
+## 安全
+
+模板执行启用了 Velocity 的 [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html)：禁止模板对 `java.lang.Class`、`java.lang.ClassLoader`、`java.lang.Runtime`、`java.lang.System` 等敏感类进行方法调用，模板无法逃逸到任意 JVM 代码。
+
+Velocity 模板仍是图灵完备的，请仅将存储脚本写入权限（`PUT _scripts`）授予可信方——与集群管理相同的信任级别。
