@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  upload-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          server-id: github
+          settings-path: ${{ github.workspace }}
+
+      - name: Verify Tag Matches Project Version
+        run: |
+          ELASTIC_VERSION=$(grep '^elastic.version=' gradle.properties | cut -d= -f2)
+          PLUGIN_VERSION=$(grep '^plugin.version=' gradle.properties | cut -d= -f2)
+          EXPECTED_TAG="v${ELASTIC_VERSION}-${PLUGIN_VERSION}"
+          if [ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match project version ${EXPECTED_TAG}"
+            exit 1
+          fi
+
+      - name: Build Plugin Bundle
+        run: ./gradlew --no-daemon check bundlePlugin --stacktrace
+
+      - name: Upload Assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" build/distributions/*.zip --clobber
