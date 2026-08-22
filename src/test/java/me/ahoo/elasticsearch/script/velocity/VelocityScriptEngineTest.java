@@ -1,5 +1,7 @@
 package me.ahoo.elasticsearch.script.velocity;
 
+import org.elasticsearch.common.logging.internal.LoggerFactoryImpl;
+import org.elasticsearch.logging.internal.spi.LoggerFactory;
 import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
@@ -19,6 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 public class VelocityScriptEngineTest {
+
+    static {
+        // Since Elasticsearch 9.2, ElasticsearchException's class initialization goes through
+        // org.elasticsearch.logging, whose LoggerFactory must be wired by the host. A real ES node
+        // does this in Bootstrap; unit tests have to provide it before any ES class initializes.
+        LoggerFactory.setInstance(new LoggerFactoryImpl());
+    }
+
     private final VelocityScriptEngine velocityScriptEngine = (VelocityScriptEngine) new VelocityPlugin().getScriptEngine(null, null);
     private static final String PRODUCT_SEARCH_TEMPLATE_NAME = "product_search";
     private static final String PRODUCT_SEARCH_TEMPLATE_CONTENT = getSearchTemplate();
