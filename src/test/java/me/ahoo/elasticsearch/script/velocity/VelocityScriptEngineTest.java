@@ -12,6 +12,8 @@ import org.elasticsearch.xcontent.XContentParser;
 import org.elasticsearch.xcontent.json.JsonXContent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,7 +78,7 @@ public class VelocityScriptEngineTest {
     @Test
     public void executeSearchTemplateScript() {
         var templateOutput = executeSearchTemplate();
-        Assertions.assertEquals(templateOutput, "    {\n" +
+        Assertions.assertEquals("    {\n" +
                 "      \"from\": 0,\n" +
                 "      \"size\": 10,\n" +
                 "      \"track_total_hits\": true,\n" +
@@ -90,7 +92,7 @@ public class VelocityScriptEngineTest {
                 "              ]\n" +
                 "          }\n" +
                 "        }\n" +
-                "    }");
+                "    }", templateOutput);
     }
 
     public String executeSearchTemplate() {
@@ -114,7 +116,7 @@ public class VelocityScriptEngineTest {
 
     @Test
     public void getSupportedContexts() {
-        Assertions.assertEquals(velocityScriptEngine.getSupportedContexts(), Collections.singleton(TemplateScript.CONTEXT));
+        Assertions.assertEquals(Collections.singleton(TemplateScript.CONTEXT), velocityScriptEngine.getSupportedContexts());
     }
 
     @Test
@@ -286,11 +288,72 @@ public class VelocityScriptEngineTest {
     }
 
     @Test
+    public void executeWhenTemplateSetsNestedParam() {
+        Map<String, Object> filter = new HashMap<>(Map.of("field", "orig"));
+        List<Object> ids = new java.util.ArrayList<>(List.of("a"));
+        var params = new HashMap<String, Object>(Map.of("filter", filter, "ids", ids));
+        var output = render(velocityScriptEngine, "#set($filter.field = 'changed')#set($ok = $ids.add('b'))$filter.field $ids",
+                Map.of("content_type", "text/plain"), params);
+        Assertions.assertEquals("changed [a, b]", output);
+        Assertions.assertEquals(Map.of("field", "orig"), filter, "nested caller map must not change");
+        Assertions.assertEquals(List.of("a"), ids, "nested caller list must not change");
+    }
+
+    @Test
     public void executeTwiceWhenTemplateSetsVariable() {
         var script = velocityScriptEngine.compile("set_state", "#if($x)second#else#set($x = 1)first#end", TemplateScript.CONTEXT, Collections.emptyMap())
                 .newInstance(new HashMap<>());
         Assertions.assertEquals("first", script.execute());
         Assertions.assertEquals("first", script.execute());
+    }
+
+    @Test
+    public void executeWhenMethodOverflowsStack() {
+        var ex = Assertions.assertThrows(ScriptException.class,
+                () -> render(velocityScriptEngine, "$deep.dive(0)", Collections.emptyMap(), Map.of("deep", new Recursive())));
+        // Velocity wraps the overflow from inside the method call; it must still not reach Elasticsearch as an Error
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            Assertions.assertFalse(t instanceof Error, "cause chain must not carry an Error: " + t);
+        }
+    }
+
+    @Test
+    public void executeWhenExceptionHasNoMessage() {
+        var ex = Assertions.assertThrows(ScriptException.class,
+                () -> render(velocityScriptEngine, "$obj", Collections.emptyMap(), Map.of("obj", new SilentFailure())));
+        Assertions.assertEquals("Error running render_test", ex.getMessage());
+    }
+
+    @Test
+    public void executeWhenToStringReturnsNull() {
+        Assertions.assertEquals("$obj", render(velocityScriptEngine, "$obj", Collections.emptyMap(), Map.of("obj", new NullString())));
+    }
+
+    @Test
+    public void executeWhenForeachOverNonIterable() {
+        Assertions.assertEquals("", render(velocityScriptEngine, "#foreach($x in $n)x#end", Collections.emptyMap(), Map.of("n", 5)));
+    }
+
+    @Test
+    public void compileWhenNameIsNull() {
+        String code = "$p.throwError()";
+        var factory = velocityScriptEngine.compile(null, code, TemplateScript.CONTEXT, Collections.emptyMap());
+        var ex = Assertions.assertThrows(ScriptException.class, () -> factory.newInstance(Map.of("p", new Params())).execute());
+        // like Elasticsearch's inline scripts, an anonymous script is identified by its source
+        Assertions.assertEquals(code, ex.getScript());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"application/json", "application/json; charset=UTF-8", "application/json;charset=utf-8"})
+    public void executeWhenJsonContentType(String contentType) {
+        Assertions.assertEquals("a\\\"b", render(velocityScriptEngine, "$kw", Map.of("content_type", contentType), Map.of("kw", "a\"b")));
+    }
+
+    @Test
+    public void executeWhenOptionsHaveNoContentType() {
+        var factory = velocityScriptEngine.compile("no_options", "$kw", TemplateScript.CONTEXT, null);
+        Assertions.assertEquals("a\\\"b", factory.newInstance(Map.of("kw", "a\"b")).execute());
+        Assertions.assertEquals("a\\\"b", render(velocityScriptEngine, "$kw", Map.of("other", "x"), Map.of("kw", "a\"b")));
     }
 
     private static String render(VelocityScriptEngine engine, String code, Map<String, String> options, Map<String, Object> params) {
@@ -308,6 +371,26 @@ public class VelocityScriptEngineTest {
 
         public void throwError() {
             throw new RuntimeException("error");
+        }
+    }
+
+    public static class Recursive {
+        public int dive(int depth) {
+            return dive(depth + 1);
+        }
+    }
+
+    public static class SilentFailure {
+        @Override
+        public String toString() {
+            throw new IllegalStateException();
+        }
+    }
+
+    public static class NullString {
+        @Override
+        public String toString() {
+            return null;
         }
     }
 
