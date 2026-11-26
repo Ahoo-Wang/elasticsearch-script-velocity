@@ -31,6 +31,13 @@ public class RenderSupportTest {
     }
 
     @Test
+    public void jsonEncoderEscapesQuotesAndPunctuation() {
+        Assertions.assertEquals("a\\\"b\\\\c\\n", ReferenceEncoder.JSON.encode("a\"b\\c\n"));
+        Assertions.assertEquals("\\u007b\\u007d\\u005b\\u005d\\u002c\\u002f", ReferenceEncoder.JSON.encode("{}[],/"));
+        Assertions.assertEquals("plain text: 1.5e3 -2 *#", ReferenceEncoder.JSON.encode("plain text: 1.5e3 -2 *#"));
+    }
+
+    @Test
     public void handlerPassesValuesThroughOutsideRender() {
         Assertions.assertEquals("a\"b", new EncodingReferenceInsertionHandler().referenceInsert(null, "$v", "a\"b"));
     }

@@ -134,13 +134,15 @@ Stored templates are managed with the usual [stored script APIs](https://www.ela
 
 | `content_type` option | Encoding |
 |---|---|
-| not set, `application/json` (default) | JSON string escaping: `"`, `\` and control characters are escaped |
+| not set, `application/json` (default) | JSON string escaping (`"`, `\`, control characters), plus the JSON punctuation `{ } [ ] ,` and `/` as `\u007b`-style escapes |
 | `application/x-www-form-urlencoded` | form URL encoding |
 | `text/plain` | none: values are written as they are |
 
+**Structure comes only from the template.** Inside a JSON string the `\uXXXX` escapes decode back to the original characters, so a quoted value means exactly what it did: `_render/template` shows them escaped, the search sees `{`. Outside a string they are invalid JSON, so a parameter can never open or close an object or array, add a member, or start a comment, whether or not the template quotes it. Without this, a string sent where the template expects a number could drop every clause after it: Elasticsearch accepts `/* */` comments and ignores anything after the request's root object.
+
 Escaping happens once, when the value reaches the output. In `#set($q = "*$keywords*")`, `$keywords` is escaped when `$q` is written, not twice. A template that deliberately inserts raw JSON taken from a parameter has to be stored with `"options": {"content_type": "text/plain"}`, which turns encoding off for that whole script — every parameter it writes is then trusted.
 
-**Quotes are yours.** Encoding escapes characters, it does not add quotes. Quote every string (`"$keywords"`) and leave a parameter unquoted only where a number belongs (`$minPrice`); pass numbers as JSON numbers, since a value such as `size=abc` makes the request fail with a parse error.
+**Quotes are yours.** Encoding escapes characters, it does not add quotes. Quote every string (`"$keywords"`) and leave a parameter unquoted only where a number belongs (`$minPrice`); a value that is not a number there, such as `size=abc`, makes the request fail with a parse error. Build arrays with `#foreach` as in the example: writing a list parameter directly (`$ids`) produces an escaped string, not a JSON array.
 
 **Missing parameters.** Velocity writes a missing reference literally: `"$keywords"` becomes the string `"$keywords"`. Mustache would write nothing. Use the quiet form `$!keywords` to write nothing, or wrap the clause in `#if($keywords) … #end`.
 
@@ -164,7 +166,7 @@ script_exception: velocity #foreach iterations exceeded the limit of [100000]; r
 ## Security
 
 - **Templates are code.** Velocity is Turing-complete, so whoever can store scripts (`PUT _scripts`, the cluster `manage` privilege) controls what a search does. Grant it like cluster administration.
-- **Parameters are data.** Search users only supply `params`. Their values are escaped as described above, so a parameter cannot introduce new keys or clauses — as long as the template quotes every string parameter.
+- **Parameters are data.** Search users only supply `params`. Their values are escaped as described above, so a parameter cannot change the structure of the query (add keys or clauses, close objects early, comment parts out), quoted or not.
 - **Sandbox.** Templates run with Velocity's [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html): method calls on `java.lang.Class`, `ClassLoader`, `Runtime`, `System`, `Thread`, reflection and similar classes are blocked, so a template cannot reach arbitrary JVM code. Rendering is bounded by the [limits](#limits) above.
 - **Entitlements.** Elasticsearch 9.x confines plugins with entitlements. This plugin requests none: no file, network or process access.
 
@@ -177,6 +179,7 @@ script_exception: velocity #foreach iterations exceeded the limit of [100000]; r
 - **`#macro` definitions are local to their script.** Previously the first definition of a name was shared by every template and survived updates to the script that defined it.
 - **Renders are limited** to `1mb` of output and `100000` loop iterations; raise the [settings](#limits) if a template needs more.
 - The plugin no longer ships `plugin-security.policy`, so the installer no longer warns about a legacy security policy.
+- **Since 2.0.1**, JSON encoding also escapes `{ } [ ] ,` and `/` (2.0.0 let a parameter written unquoted restructure the query). Quoted values are unaffected; a list parameter written directly (`$ids`) no longer renders as a JSON array, so build it with `#foreach`.
 
 ## Performance
 

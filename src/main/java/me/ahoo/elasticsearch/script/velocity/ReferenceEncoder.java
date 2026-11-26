@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * How values written by {@code $references} are encoded, chosen from the script's {@code content_type} option the
- * same way the mustache engine does: JSON string escaping by default, form URL encoding for
+ * same way the mustache engine does: JSON escaping by default, form URL encoding for
  * {@code application/x-www-form-urlencoded}, and no encoding for {@code text/plain}.
  */
 enum ReferenceEncoder {
@@ -32,10 +32,33 @@ enum ReferenceEncoder {
             return value;
         }
     },
+    /**
+     * JSON string escaping, plus unicode escapes (backslash-u) for the JSON punctuation <code>{ } [ ] ,</code> and for
+     * the slash.
+     * <p>
+     * Inside a JSON string those escapes decode to the original characters, so a quoted value means exactly what it
+     * did. Outside a string a backslash is invalid JSON, so a value written unquoted (where the template expects a
+     * number) can never open or close an object or array, add a member, or start a comment (Elasticsearch accepts
+     * C-style comments in request bodies). Elasticsearch also ignores anything after the request's root object, so a
+     * single unescaped closing brace would otherwise be enough to drop every clause that follows it.
+     */
     JSON {
         @Override
         String encode(String value) {
-            return new String(JsonStringEncoder.getInstance().quoteAsString(value));
+            char[] quoted = JsonStringEncoder.getInstance().quoteAsString(value);
+            StringBuilder encoded = new StringBuilder(quoted.length + 16);
+            for (char c : quoted) {
+                switch (c) {
+                    case '{' -> encoded.append("\\u007b");
+                    case '}' -> encoded.append("\\u007d");
+                    case '[' -> encoded.append("\\u005b");
+                    case ']' -> encoded.append("\\u005d");
+                    case ',' -> encoded.append("\\u002c");
+                    case '/' -> encoded.append("\\u002f");
+                    default -> encoded.append(c);
+                }
+            }
+            return encoded.toString();
         }
     },
     FORM_URL {

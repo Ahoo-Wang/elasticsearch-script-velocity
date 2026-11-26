@@ -189,6 +189,23 @@ public class VelocityScriptEngineTest {
     }
 
     @Test
+    public void executeWhenQuotedParamHasJsonPunctuation() throws IOException {
+        String keyword = "C++ {std::vector}, [a]/b // c /* d */";
+        var output = render(velocityScriptEngine, "{\"q\": \"$kw\"}", Collections.emptyMap(), Map.of("kw", keyword));
+        Assertions.assertFalse(output.contains("{std"), output);
+        Assertions.assertEquals(Map.of("q", keyword), parseJson(output));
+    }
+
+    @Test
+    public void executeWhenUnquotedParamTriesToRestructure() {
+        // where a template expects a number, a string must not be able to close the object (Elasticsearch ignores what
+        // follows the root object) or open a comment that swallows the clauses after it
+        var output = render(velocityScriptEngine, "$from", Collections.emptyMap(), Map.of("from", "0} /* ] , [ //"));
+        Assertions.assertEquals("0\\u007d \\u002f* \\u005d \\u002c \\u005b \\u002f\\u002f", output);
+        Assertions.assertThrows(Exception.class, () -> parseJson("{\"from\": " + output + "}"));
+    }
+
+    @Test
     public void executeWhenInterpolatedParamIsEscapedOnce() throws IOException {
         var output = render(velocityScriptEngine, "#set($q = \"*$kw*\"){\"q\": \"$q\"}", Collections.emptyMap(), Map.of("kw", "a\"b"));
         Assertions.assertEquals("*a\"b*", parseJson(output).get("q"));
