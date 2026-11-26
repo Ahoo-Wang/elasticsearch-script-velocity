@@ -15,6 +15,7 @@ jobs:
   upload-assets:
     name: Upload Release Assets
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
 
       - name: Checkout
@@ -25,8 +26,11 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          server-id: github
-          settings-path: ${{ github.workspace }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
 
       - name: Verify Tag Matches Project Version
         run: |
@@ -40,6 +44,10 @@ jobs:
 
       - name: Build Plugin Bundle
         run: ./gradlew --no-daemon check bundlePlugin --stacktrace
+
+      # The exact zip that gets uploaded must install and work in a real node first
+      - name: Run end-to-end tests
+        run: python3 e2e/run_e2e.py
 
       - name: Upload Assets
         env:
