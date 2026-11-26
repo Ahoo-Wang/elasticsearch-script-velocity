@@ -135,4 +135,27 @@ VelocityScriptEngineBenchmark.executeSearchTemplate  thrpt       1020003.447    
 
 模板执行启用了 Velocity 的 [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html)：禁止模板对 `java.lang.Class`、`java.lang.ClassLoader`、`java.lang.Runtime`、`java.lang.System` 等敏感类进行方法调用，模板无法逃逸到任意 JVM 代码。
 
+### 输出编码
+
+`$引用` 写出的值会按脚本的 `content_type` 选项编码，规则与 mustache 引擎一致：
+
+| `content_type` | 编码方式 |
+|---|---|
+| 未设置、`application/json`（默认） | JSON 字符串转义，例如参数 `27" monitor` 无法跳出 `"$keywords"` |
+| `application/x-www-form-urlencoded` | 表单 URL 编码 |
+| `text/plain` | 不编码（原样输出） |
+
+每个值只在写入输出时编码一次：`#set($q = "*$keywords*")` 中的值会在写出 `$q` 时编码。如果模板有意把参数中的原始 JSON 直接插入，需要以 `"options": {"content_type": "text/plain"}` 存储该脚本，这会关闭整个脚本的编码。
+
+### 隔离与限制
+
+各脚本相互隔离：`#macro` 定义只在定义它的模板内有效，`#parse` / `#include` 无法加载其他脚本或文件。
+
+每次渲染受两个节点设置（`elasticsearch.yml`）约束，超出任一限制时请求会以 `script_exception` 失败，而不是截断输出：
+
+| 设置 | 默认值 | 限制对象 |
+|---|---|---|
+| `velocity.max_output_size_bytes` | `1mb` | 单次渲染输出的大小（按字符计数，与 `mustache.max_output_size_bytes` 一致） |
+| `velocity.max_loop_iterations` | `100000` | 单次渲染中 `#foreach` 的迭代总次数（含嵌套循环） |
+
 Velocity 模板仍是图灵完备的，请仅将存储脚本写入权限（`PUT _scripts`）授予可信方——与集群管理相同的信任级别。

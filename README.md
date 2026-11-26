@@ -133,4 +133,27 @@ VelocityScriptEngineBenchmark.executeSearchTemplate  thrpt       1020003.447    
 
 Templates are executed with Velocity's [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html): method calls on sensitive classes such as `java.lang.Class`, `java.lang.ClassLoader`, `java.lang.Runtime`, and `java.lang.System` are blocked, so templates cannot escape into arbitrary JVM code.
 
+### Output encoding
+
+Values written by `$references` are encoded according to the script's `content_type` option, the same way the mustache engine does:
+
+| `content_type` | Encoding |
+|---|---|
+| not set, `application/json` (default) | JSON string escaping, so a parameter such as `27" monitor` cannot break out of `"$keywords"` |
+| `application/x-www-form-urlencoded` | form URL encoding |
+| `text/plain` | none (raw output) |
+
+A value is encoded once, when it is written to the output: in `#set($q = "*$keywords*")` the value is encoded when `$q` is written. A template that deliberately inserts raw JSON taken from a parameter must be stored with `"options": {"content_type": "text/plain"}`, which turns encoding off for the whole script.
+
+### Isolation and limits
+
+Each script is isolated: `#macro` definitions are local to the template that defines them, and `#parse` / `#include` cannot load other scripts or files.
+
+Every render is bounded by two node settings (`elasticsearch.yml`); going over either fails the request with a `script_exception` instead of truncating the output:
+
+| Setting | Default | Limits |
+|---|---|---|
+| `velocity.max_output_size_bytes` | `1mb` | size of one rendered script (counted in characters, like `mustache.max_output_size_bytes`) |
+| `velocity.max_loop_iterations` | `100000` | `#foreach` iterations of one render, nested loops included |
+
 Velocity templates are still Turing-complete, so only grant stored-script write access (`PUT _scripts`) to trusted parties — the same trust level you apply to cluster administration.

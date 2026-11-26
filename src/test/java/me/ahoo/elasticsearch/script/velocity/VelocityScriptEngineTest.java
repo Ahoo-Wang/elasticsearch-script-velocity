@@ -1,6 +1,7 @@
 package me.ahoo.elasticsearch.script.velocity;
 
 import org.elasticsearch.common.logging.internal.LoggerFactoryImpl;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.logging.internal.spi.LoggerFactory;
 import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptException;
@@ -29,7 +30,7 @@ public class VelocityScriptEngineTest {
         LoggerFactory.setInstance(new LoggerFactoryImpl());
     }
 
-    private final VelocityScriptEngine velocityScriptEngine = (VelocityScriptEngine) new VelocityPlugin().getScriptEngine(null, null);
+    private final VelocityScriptEngine velocityScriptEngine = (VelocityScriptEngine) new VelocityPlugin().getScriptEngine(Settings.EMPTY, null);
     private static final String PRODUCT_SEARCH_TEMPLATE_NAME = "product_search";
     private static final String PRODUCT_SEARCH_TEMPLATE_CONTENT = getSearchTemplate();
     private final TemplateScript.Factory PRODUCT_SEARCH_FACTORY = velocityScriptEngine
@@ -142,12 +143,7 @@ public class VelocityScriptEngineTest {
         params.put("keywords", "phone");
         var output = PRODUCT_SEARCH_FACTORY.newInstance(params).execute();
 
-        Map<String, Object> json;
-        try (XContentParser parser = JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                new java.io.ByteArrayInputStream(output.getBytes(java.nio.charset.StandardCharsets.UTF_8)))) {
-            json = parser.map();
-        }
-        var productNameQuery = findProductNameMatch(json);
+        var productNameQuery = findProductNameMatch(parseJson(output));
         Assertions.assertEquals("phone", productNameQuery.get("query"));
     }
 
@@ -174,6 +170,138 @@ public class VelocityScriptEngineTest {
         params.put("params", new Params());
         var ex = Assertions.assertThrows(ScriptException.class, () -> factory.newInstance(params).execute());
         Assertions.assertTrue(ex.getScriptStack().isEmpty(), "script stack should not carry the Java stack trace");
+    }
+
+    @Test
+    public void executeWhenParamNeedsJsonEscaping() throws IOException {
+        String keyword = "27\" monitor \\ C:\\path\nnext\tline";
+        var output = render(velocityScriptEngine, "{\"q\": \"$kw\"}", Collections.emptyMap(), Map.of("kw", keyword));
+        Assertions.assertEquals(keyword, parseJson(output).get("q"));
+    }
+
+    @Test
+    public void executeWhenParamTriesToInjectJson() throws IOException {
+        String injection = "x\", \"size\": 10000, \"y\": \"";
+        var output = render(velocityScriptEngine, "{\"q\": \"$kw\"}", Collections.emptyMap(), Map.of("kw", injection));
+        Assertions.assertEquals(Map.of("q", injection), parseJson(output));
+    }
+
+    @Test
+    public void executeWhenInterpolatedParamIsEscapedOnce() throws IOException {
+        var output = render(velocityScriptEngine, "#set($q = \"*$kw*\"){\"q\": \"$q\"}", Collections.emptyMap(), Map.of("kw", "a\"b"));
+        Assertions.assertEquals("*a\"b*", parseJson(output).get("q"));
+    }
+
+    @Test
+    public void executeWhenMacroAndBlockRenderParams() throws IOException {
+        String code = "#macro(term $field $value){\"$field\": \"$value\"}#end"
+                + "#define($block)\"$kw\"#end"
+                + "{\"macro\": #term(\"brand\" $kw), \"macroLiteral\": #term(\"brand\" \"x$kw\"), \"block\": $block}";
+        var json = parseJson(render(velocityScriptEngine, code, Collections.emptyMap(), Map.of("kw", "a\"b")));
+        Assertions.assertEquals(Map.of("brand", "a\"b"), json.get("macro"));
+        Assertions.assertEquals(Map.of("brand", "xa\"b"), json.get("macroLiteral"));
+        Assertions.assertEquals("a\"b", json.get("block"));
+    }
+
+    @Test
+    public void executeWhenTextPlainContentType() {
+        var output = render(velocityScriptEngine, "$kw", Map.of("content_type", "text/plain"), Map.of("kw", "a\"b"));
+        Assertions.assertEquals("a\"b", output);
+    }
+
+    @Test
+    public void executeWhenFormUrlEncodedContentType() {
+        var output = render(velocityScriptEngine, "q=$kw", Map.of("content_type", "application/x-www-form-urlencoded"), Map.of("kw", "a b&c"));
+        Assertions.assertEquals("q=a+b%26c", output);
+    }
+
+    @Test
+    public void compileWhenUnknownContentType() {
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> velocityScriptEngine.compile("ct_test", "$kw", TemplateScript.CONTEXT, Map.of("content_type", "text/html")));
+    }
+
+    @Test
+    public void executeWhenTemplatesDefineSameMacro() {
+        var tenantA = velocityScriptEngine.compile("tenant_a", "#macro(filter)A#end#filter()", TemplateScript.CONTEXT, Collections.emptyMap());
+        var tenantB = velocityScriptEngine.compile("tenant_b", "#macro(filter)B#end#filter()", TemplateScript.CONTEXT, Collections.emptyMap());
+        Assertions.assertEquals("A", tenantA.newInstance(Map.of()).execute());
+        Assertions.assertEquals("B", tenantB.newInstance(Map.of()).execute());
+    }
+
+    @Test
+    public void executeWhenStoredScriptMacroChanges() {
+        var v1 = velocityScriptEngine.compile("stored_macro", "#macro(m)v1#end#m()", TemplateScript.CONTEXT, Collections.emptyMap());
+        var v2 = velocityScriptEngine.compile("stored_macro", "#macro(m)v2#end#m()", TemplateScript.CONTEXT, Collections.emptyMap());
+        Assertions.assertEquals("v2", v2.newInstance(Map.of()).execute());
+        Assertions.assertEquals("v1", v1.newInstance(Map.of()).execute());
+    }
+
+    @Test
+    public void executeWhenTemplateIncludesAnotherScript() {
+        velocityScriptEngine.compile("other_script", "secret", TemplateScript.CONTEXT, Collections.emptyMap());
+        for (String directive : List.of("#include(\"other_script\")", "#parse(\"other_script\")")) {
+            var factory = velocityScriptEngine.compile("includer", directive, TemplateScript.CONTEXT, Collections.emptyMap());
+            Assertions.assertThrows(ScriptException.class, () -> factory.newInstance(Map.of()).execute(), directive);
+        }
+    }
+
+    @Test
+    public void executeWhenLoopLimitExceeded() {
+        var engine = new VelocityScriptEngine(Settings.builder().put("velocity.max_loop_iterations", 100).build());
+        var atLimit = engine.compile("loop_ok", "#foreach($i in [1..100])#set($last = $i)#end$last", TemplateScript.CONTEXT, Collections.emptyMap());
+        Assertions.assertEquals("100", atLimit.newInstance(Map.of()).execute());
+        // the budget is per render, not per factory or engine
+        Assertions.assertEquals("100", atLimit.newInstance(Map.of()).execute());
+
+        var ex = Assertions.assertThrows(ScriptException.class,
+                () -> render(engine, "#foreach($i in [1..101])#end", Collections.emptyMap(), Map.of()));
+        Assertions.assertTrue(ex.getMessage().contains("velocity.max_loop_iterations"), ex.getMessage());
+        // nested loops share one budget: 20 + 20 * 20 > 100
+        Assertions.assertThrows(ScriptException.class,
+                () -> render(engine, "#foreach($i in [1..20])#foreach($j in [1..20])#end#end", Collections.emptyMap(), Map.of()));
+    }
+
+    @Test
+    public void executeWhenOutputLimitExceeded() {
+        var engine = new VelocityScriptEngine(Settings.builder().put("velocity.max_output_size_bytes", "100b").build());
+        Assertions.assertEquals(100, render(engine, "#foreach($i in [1..10])0123456789#end", Collections.emptyMap(), Map.of()).length());
+
+        var ex = Assertions.assertThrows(ScriptException.class,
+                () -> render(engine, "#foreach($i in [1..11])0123456789#end", Collections.emptyMap(), Map.of()));
+        Assertions.assertTrue(ex.getMessage().contains("velocity.max_output_size_bytes"), ex.getMessage());
+    }
+
+    @Test
+    public void compileWhenTemplateNestsTooDeeply() {
+        String code = "#set($x = " + "(".repeat(50_000) + "1" + ")".repeat(50_000) + ")";
+        var ex = Assertions.assertThrows(ScriptException.class,
+                () -> velocityScriptEngine.compile("deep", code, TemplateScript.CONTEXT, Collections.emptyMap()));
+        // Elasticsearch halts the node when it finds an Error anywhere in a cause chain
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            Assertions.assertFalse(t instanceof Error, "cause chain must not carry an Error: " + t);
+        }
+        // the parser pool is still usable afterwards
+        Assertions.assertEquals("ok", render(velocityScriptEngine, "ok", Collections.emptyMap(), Map.of()));
+    }
+
+    @Test
+    public void executeTwiceWhenTemplateSetsVariable() {
+        var script = velocityScriptEngine.compile("set_state", "#if($x)second#else#set($x = 1)first#end", TemplateScript.CONTEXT, Collections.emptyMap())
+                .newInstance(new HashMap<>());
+        Assertions.assertEquals("first", script.execute());
+        Assertions.assertEquals("first", script.execute());
+    }
+
+    private static String render(VelocityScriptEngine engine, String code, Map<String, String> options, Map<String, Object> params) {
+        return engine.compile("render_test", code, TemplateScript.CONTEXT, options).newInstance(params).execute();
+    }
+
+    private static Map<String, Object> parseJson(String json) throws IOException {
+        try (XContentParser parser = JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                new java.io.ByteArrayInputStream(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)))) {
+            return parser.map();
+        }
     }
 
     public static class Params {

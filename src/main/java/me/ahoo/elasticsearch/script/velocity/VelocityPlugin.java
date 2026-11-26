@@ -13,6 +13,7 @@
 
 package me.ahoo.elasticsearch.script.velocity;
 
+import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.ScriptPlugin;
@@ -20,11 +21,17 @@ import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptEngine;
 
 import java.util.Collection;
+import java.util.List;
 
 public class VelocityPlugin extends Plugin implements ScriptPlugin {
-    
+
     @Override
     public ScriptEngine getScriptEngine(Settings settings, Collection<ScriptContext<?>> contexts) {
-        return new VelocityScriptEngine();
+        return new VelocityScriptEngine(settings);
+    }
+
+    @Override
+    public List<Setting<?>> getSettings() {
+        return List.of(VelocityScriptEngine.MAX_OUTPUT_SIZE, VelocityScriptEngine.MAX_LOOP_ITERATIONS);
     }
 }
