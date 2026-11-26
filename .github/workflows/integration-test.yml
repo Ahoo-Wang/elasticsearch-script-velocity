@@ -12,11 +12,24 @@
 #
 
 name: Integration Test
-on: [ push, pull_request ]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  elasticsearch-script-velocity-test:
+  test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -26,8 +39,67 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          server-id: github
-          settings-path: ${{ github.workspace }}
 
-      - name: Test
-        run: ./gradlew clean check --stacktrace
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Check and bundle
+        run: ./gradlew clean check jmhClasses bundlePlugin --stacktrace
+
+      - name: Upload plugin bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-bundle
+          path: build/distributions/*.zip
+          if-no-files-found: error
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: build/reports/jacoco/test/jacocoTestReport.xml
+          if-no-files-found: error
+
+  e2e:
+    name: E2E
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download plugin bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: plugin-bundle
+          path: build/distributions
+
+      # Installs the bundle into the official Elasticsearch image of the version in gradle.properties
+      - name: Run end-to-end tests
+        run: python3 e2e/run_e2e.py
+
+  codecov:
+    name: Codecov
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-report
+          path: build/reports/jacoco/test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
+          verbose: true
+          files: ./build/reports/jacoco/test/jacocoTestReport.xml

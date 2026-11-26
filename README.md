@@ -5,158 +5,193 @@
 [![codecov](https://codecov.io/gh/Ahoo-Wang/elasticsearch-script-velocity/graph/badge.svg?token=QK8XZXHBZN)](https://codecov.io/gh/Ahoo-Wang/elasticsearch-script-velocity)
 ![Integration Test Status](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/actions/workflows/integration-test.yml/badge.svg)
 
-*Search Template* is a highly valuable feature in Elasticsearch. It allows the pre-definition of the query structure for search requests, with the ability to pass search parameters during the actual request. This not only makes the request body more concise but also helps avoid errors that may occur when concatenating query structures on the client side.
+[中文文档](README.zh-CN.md)
 
-When search optimization is necessary, modifications to search scripts can be made directly on the Elasticsearch server without the need to redeploy the client. This significantly enhances the efficiency of search optimization.
+An Elasticsearch plugin that adds [Apache Velocity](https://velocity.apache.org/) as a language for stored [search templates](https://www.elastic.co/docs/solutions/search/search-templates) (`"lang": "velocity"`).
 
-However, the [default scripting languages](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-scripting.html#scripting-available-languages) (`mustache`/`painless`/`expression`) supported by *Elasticsearch* have relatively limited syntax logic, lacking support for any conditional statements. This imposes significant constraints on the use of *Search Template*.
+## Why
 
-By introducing *Velocity* into *Elasticsearch*, support for any conditional statements is enabled, making the usage of *Search Template* more flexible. This provides users with greater customization capabilities for powerful and flexible searches.
+A search template keeps the shape of a query on the server: clients send only parameters, and you can tune the query without redeploying them. Mustache, the template language Elasticsearch ships with, is deliberately logic-less: a section can test whether a value is present, but it cannot compare values (`$sort == "newest"`), choose between several branches, or compute anything.
 
-## Version Convention
+Velocity provides exactly those pieces:
 
-> version = `elasticsearchVersion`-`pluginVersion`
+| Need | Velocity |
+|---|---|
+| Branch on a value | `#if($sort == "price_asc") … #elseif($sort == "newest") … #else … #end` |
+| Optional clause | `#if($minPrice) … #end` (missing, `null`, `false`, empty and **zero** are false; use `#if($minPrice \|\| $minPrice == 0)` when `0` is meaningful) |
+| Build a list | `#foreach($id in $brandIds)"$id"#if($foreach.hasNext),#end#end` |
+| Defaults and variables | `#set($size = 10)` |
+| Reuse a fragment | `#macro(range $field $from) … #end` |
+
+## Compatibility
+
+Releases are named `<Elasticsearch version>-<plugin version>`, for example `9.5.7-2.0.0`. Elasticsearch only loads a plugin built for its exact version, so pick the [release](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases) whose first part equals your cluster's version. `main` targets Elasticsearch 9.x; older lines are maintained on branches.
 
 ## Install
 
-> optional 1 - use elasticsearch-plugin to install
-> 
-> Tip: Replace [version] in the link with your Elasticsearch version
+On **every** node, then restart the node:
 
-```shell script
-./bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v[version]/elasticsearch-script-velocity-[version].zip
+```shell
+bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v9.5.7-2.0.0/elasticsearch-script-velocity-9.5.7-2.0.0.zip
 ```
-> optional 2 - download pre-build package from here: [Releases](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)
 
-1. create plugin folder `cd your-es-root/plugins/ && mkdir elasticsearch-script-velocity`
-2. unzip plugin to folder `your-es-root/plugins/elasticsearch-script-velocity`
+Replace both occurrences of `9.5.7-2.0.0` with the release that matches your cluster. Without network access, download the zip and install it with `file:///path/to/elasticsearch-script-velocity-<version>.zip`. Check the result with `GET _cat/plugins`.
 
 ## Use
 
-### Store script
+Velocity templates are **stored scripts**. `_search/template` and `_render/template` always treat an inline `source` as mustache, so a Velocity template has to be stored first and then referenced by `id`.
 
-[create-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/create-stored-script-api.html)
+The examples use Kibana Dev Tools syntax, where `"""…"""` holds a multi-line string. With `curl`, send `source` as an ordinary JSON string instead (escape quotes and newlines).
 
-```http request
-POST _scripts/templateid
+### 1. Store the template
+
+```
+PUT _scripts/product-search
 {
-    "script": {
-        "lang": "velocity",
-        "source": {
-            "query": {
-                "match": {
-                    "title": "$!query_string"
-                }
-            }
-        }
+  "script": {
+    "lang": "velocity",
+    "source": """
+{
+  "from": #if($from)$from#{else}0#end,
+  "size": #if($size)$size#{else}10#end,
+  "query": {
+    "bool": {
+      "filter": [
+        { "term": { "deleted": false } }
+        #if($brandIds)
+        , { "terms": { "brandId": [#foreach($id in $brandIds)"$id"#if($foreach.hasNext), #end#end] } }
+        #end
+        #if($minPrice)
+        , { "range": { "price": { "gte": $minPrice } } }
+        #end
+      ]
+      #if($keywords)
+      , "must": { "match": { "name": "$keywords" } }
+      #end
     }
+  }
+  #if($sort == "price_asc")
+  , "sort": [ { "price": "asc" } ]
+  #elseif($sort == "newest")
+  , "sort": [ { "createdAt": "desc" } ]
+  #end
 }
-```
-
-> Tip: Velocity writes a missing parameter as the literal text `$query_string` (mustache writes nothing). Use the quiet reference `$!query_string` to write nothing instead, or wrap optional parts in `#if($query_string)...#end`.
-
-### Get Stored Script
-
-[get-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/get-stored-script-api.html)
-
-```http request
-GET _scripts/templateid
-```
-
-> Response:
-
-```json
-{
-  "_id" : "templateid",
-  "found" : true,
-  "script" : {
-    "lang" : "velocity",
-    "source" : """{"query":{"match":{"title":"$!query_string"}}}""",
-    "options" : {
-      "content_type" : "application/json; charset=UTF-8"
-    }
+"""
   }
 }
 ```
 
-### Delete a stored script
+`source` must be a string: Velocity directives are not JSON. `PUT _scripts/product-search` stores the template without compiling it, so syntax errors only show up at search time. Store it as `PUT _scripts/product-search/template` instead to compile it immediately and get a `400` for a broken template.
 
-[delete-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/delete-stored-script-api.html)
+### 2. Check what it renders
 
-```http request
-DELETE _scripts/templateid
 ```
-
-### Search template
-
-[search-template](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-template.html)
-
-```http request
-GET _search/template
+POST _render/template/product-search
 {
-    "id": "templateid", 
-    "params": {
-        "query_string": "search for these words"
-    }
+  "params": { "keywords": "monitor", "brandIds": ["dell", "lg"], "minPrice": 50, "sort": "price_asc" }
 }
 ```
-
-### Validating a search template
-
-```http request
-GET _render/template/templateid
-{
-  "params": {
-    "query_string": "search for these words"
-  }
-}
-```
-
-> Response:
 
 ```json
 {
-  "template_output" : {
-    "query" : {
-      "match" : {
-        "title" : "search for these words"
+  "template_output": {
+    "from": 0,
+    "size": 10,
+    "query": {
+      "bool": {
+        "filter": [
+          { "term": { "deleted": false } },
+          { "terms": { "brandId": ["dell", "lg"] } },
+          { "range": { "price": { "gte": 50 } } }
+        ],
+        "must": { "match": { "name": "monitor" } }
       }
-    }
+    },
+    "sort": [ { "price": "asc" } ]
   }
 }
 ```
 
-## Benchmark
+The rendered output has to be a valid search request body; `_render/template` rejects anything else (for example an unknown top-level key) with a `parsing_exception`.
+
+### 3. Search
 
 ```
-Benchmark                                             Mode  Cnt        Score   Error  Units
-VelocityScriptEngineBenchmark.executeSearchTemplate  thrpt       1020003.447          ops/s
+GET products/_search/template
+{
+  "id": "product-search",
+  "params": { "keywords": "27\" 4K", "brandIds": ["dell"] }
+}
 ```
+
+The double quote inside `27" 4K` is escaped automatically (see below), so it is searched for instead of breaking the request.
+
+Stored templates are managed with the usual [stored script APIs](https://www.elastic.co/docs/api/doc/elasticsearch/group/endpoint-script): `GET _scripts/<id>`, `DELETE _scripts/<id>`.
+
+## How parameters are rendered
+
+**Encoding.** Every value a `$reference` writes is encoded according to the script's `content_type` option, the same way mustache does it:
+
+| `content_type` option | Encoding |
+|---|---|
+| not set, `application/json` (default) | JSON string escaping: `"`, `\` and control characters are escaped |
+| `application/x-www-form-urlencoded` | form URL encoding |
+| `text/plain` | none: values are written as they are |
+
+Escaping happens once, when the value reaches the output. In `#set($q = "*$keywords*")`, `$keywords` is escaped when `$q` is written, not twice. A template that deliberately inserts raw JSON taken from a parameter has to be stored with `"options": {"content_type": "text/plain"}`, which turns encoding off for that whole script — every parameter it writes is then trusted.
+
+**Quotes are yours.** Encoding escapes characters, it does not add quotes. Quote every string (`"$keywords"`) and leave a parameter unquoted only where a number belongs (`$minPrice`); pass numbers as JSON numbers, since a value such as `size=abc` makes the request fail with a parse error.
+
+**Missing parameters.** Velocity writes a missing reference literally: `"$keywords"` becomes the string `"$keywords"`. Mustache would write nothing. Use the quiet form `$!keywords` to write nothing, or wrap the clause in `#if($keywords) … #end`.
+
+**Isolation.** Each script is compiled on its own: `#macro` definitions are visible only inside the script that defines them, and `#parse` / `#include` cannot load other scripts or files (they fail with `script_exception`).
+
+## Limits
+
+Each render is bounded by two node settings, set in `elasticsearch.yml`:
+
+| Setting | Default | What it limits |
+|---|---|---|
+| `velocity.max_output_size_bytes` | `1mb` | size of one rendered template, counted in characters like `mustache.max_output_size_bytes` |
+| `velocity.max_loop_iterations` | `100000` | `#foreach` iterations in one render, nested loops included |
+
+Going over a limit fails the request with a `400` instead of truncating the query, for example:
+
+```
+script_exception: velocity #foreach iterations exceeded the limit of [100000]; raise [velocity.max_loop_iterations] if this is expected
+```
+
 ## Security
 
-Templates are executed with Velocity's [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html): method calls on sensitive classes such as `java.lang.Class`, `java.lang.ClassLoader`, `java.lang.Runtime`, and `java.lang.System` are blocked, so templates cannot escape into arbitrary JVM code.
+- **Templates are code.** Velocity is Turing-complete, so whoever can store scripts (`PUT _scripts`, the cluster `manage` privilege) controls what a search does. Grant it like cluster administration.
+- **Parameters are data.** Search users only supply `params`. Their values are escaped as described above, so a parameter cannot introduce new keys or clauses — as long as the template quotes every string parameter.
+- **Sandbox.** Templates run with Velocity's [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html): method calls on `java.lang.Class`, `ClassLoader`, `Runtime`, `System`, `Thread`, reflection and similar classes are blocked, so a template cannot reach arbitrary JVM code. Rendering is bounded by the [limits](#limits) above.
+- **Entitlements.** Elasticsearch 9.x confines plugins with entitlements. This plugin requests none: no file, network or process access.
 
-### Output encoding
+## Upgrading to 2.0
 
-Values written by `$references` are encoded according to the script's `content_type` option, the same way the mustache engine does:
+2.0.0 changes how templates render. Check your templates before upgrading:
 
-| `content_type` | Encoding |
-|---|---|
-| not set, `application/json` (default) | JSON string escaping, so a parameter such as `27" monitor` cannot break out of `"$keywords"` |
-| `application/x-www-form-urlencoded` | form URL encoding |
-| `text/plain` | none (raw output) |
+- **Parameters are JSON-escaped by default.** A template that inserted raw JSON from a parameter (for example `"sort": $sortJson`) now gets an escaped string and fails to parse. Build the structure in the template, or store that script with `"options": {"content_type": "text/plain"}`.
+- **`#parse` and `#include` no longer work.** They used to resolve against whatever scripts the node happened to have compiled. Use `#macro` inside the template instead.
+- **`#macro` definitions are local to their script.** Previously the first definition of a name was shared by every template and survived updates to the script that defined it.
+- **Renders are limited** to `1mb` of output and `100000` loop iterations; raise the [settings](#limits) if a template needs more.
+- The plugin no longer ships `plugin-security.policy`, so the installer no longer warns about a legacy security policy.
 
-A value is encoded once, when it is written to the output: in `#set($q = "*$keywords*")` the value is encoded when `$q` is written. A template that deliberately inserts raw JSON taken from a parameter must be stored with `"options": {"content_type": "text/plain"}`, which turns encoding off for the whole script.
+## Performance
 
-### Isolation and limits
+Rendering [`product_search.vm`](src/test/resources/product_search.vm) with `{from: 0, size: 10}`: about **1.37 million renders per second** on one thread (JMH, 1 warmup and 1 measurement iteration of 10 s; Apple M4 Pro, JDK 21.0.13). It is a single short run: treat it as an order of magnitude and measure on your own hardware:
 
-Each script is isolated: `#macro` definitions are local to the template that defines them, and `#parse` / `#include` cannot load other scripts or files.
+```shell
+./gradlew jmh -PjmhIncludes=VelocityScriptEngineBenchmark
+```
 
-Every render is bounded by two node settings (`elasticsearch.yml`); going over either fails the request with a `script_exception` instead of truncating the output:
+## Development
 
-| Setting | Default | Limits |
-|---|---|---|
-| `velocity.max_output_size_bytes` | `1mb` | size of one rendered script (counted in characters, like `mustache.max_output_size_bytes`) |
-| `velocity.max_loop_iterations` | `100000` | `#foreach` iterations of one render, nested loops included |
+```shell
+./gradlew clean check            # unit tests, coverage, jarHell
+./gradlew bundlePlugin           # build/distributions/elasticsearch-script-velocity-<version>.zip
+python3 e2e/run_e2e.py           # needs Docker: installs the zip into the official Elasticsearch image and tests it over REST
+```
 
-Velocity templates are still Turing-complete, so only grant stored-script write access (`PUT _scripts`) to trusted parties — the same trust level you apply to cluster administration.
+CI runs all three on every pull request. The Elasticsearch version comes from `elastic.version` in `gradle.properties`.
