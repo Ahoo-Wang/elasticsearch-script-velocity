@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v5
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           java-version: '21'
@@ -30,4 +30,4 @@ jobs:
           settings-path: ${{ github.workspace }}
 
       - name: Test
-        run: gradle clean check --stacktrace
+        run: ./gradlew clean check --stacktrace
