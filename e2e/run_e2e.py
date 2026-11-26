@@ -192,8 +192,21 @@ class VelocityPluginE2E(unittest.TestCase):
 
     def test_params_are_json_escaped(self):
         self.store("escape", TERM % '"$q"')
-        for value in ['27" monitor', "C:\\temp\\new", 'x"}}, "size": 10000, "x": {"y": "', "line\nbreak\ttab"]:
+        for value in ['27" monitor', "C:\\temp\\new", 'x"}}, "size": 10000, "x": {"y": "', "line\nbreak\ttab",
+                      "C++ {std::vector}, [a]/b // c /* d */"]:
             self.assertEqual(value, term_value(self.render("escape", {"q": value})), value)
+
+    def test_unquoted_params_cannot_restructure_the_query(self):
+        # A tenant filter between two parameters the template writes unquoted (numbers). Before JSON punctuation was
+        # escaped, from="0 /*" + size="*/" commented the filter out, and from="0}" closed the root object early
+        # (Elasticsearch ignores what follows it): both returned every tenant's documents.
+        self.store("tenant", '{"from": $from, "query": {"bool": {"filter": [{"term": {"tenant": "acme"}}]}}, "size": $size}')
+        for i, tenant in enumerate(["acme", "other"]):
+            self.call("PUT", f"/tenants/_doc/{i + 1}?refresh=true", {"tenant": tenant}, expect=201)
+        search = {"id": "tenant", "params": {"from": 0, "size": 10}}
+        self.assertEqual(["acme"], [h["_source"]["tenant"] for h in self.call("POST", "/tenants/_search/template", search)["hits"]["hits"]])
+        for attack in ({"from": "0 /*", "size": "*/"}, {"from": "0}", "size": 10}, {"from": 0, "size": "10} //"}):
+            self.call("POST", "/tenants/_search/template", {"id": "tenant", "params": attack}, expect=400)
 
     def test_missing_param_renders_literally_unless_quiet(self):
         self.store("loud", TERM % '"$kw"')

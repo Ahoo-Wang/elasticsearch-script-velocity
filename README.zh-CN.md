@@ -134,13 +134,15 @@ GET products/_search/template
 
 | `content_type` 选项 | 编码方式 |
 |---|---|
-| 未设置、`application/json`（默认） | JSON 字符串转义：转义 `"`、`\` 和控制字符 |
+| 未设置、`application/json`（默认） | JSON 字符串转义（`"`、`\`、控制字符），并把 JSON 标点 `{ } [ ] ,` 和 `/` 转义为 `\u007b` 形式 |
 | `application/x-www-form-urlencoded` | 表单 URL 编码 |
 | `text/plain` | 不编码，原样写出 |
 
+**结构只来自模板。** 在 JSON 字符串内，`\uXXXX` 会被解码回原字符，所以加了引号的值含义完全不变：`_render/template` 里看到的是转义后的形式，搜索时得到的仍是 `{`。在字符串外，它们是非法 JSON，所以无论模板是否给参数加了引号，参数都无法打开或闭合对象、数组，无法添加字段，也无法开启注释。如果不这样做，往模板期望数字的位置传一个字符串，就可能让它后面的所有子句失效：Elasticsearch 接受 `/* */` 注释，并且会忽略请求根对象之后的所有内容。
+
 转义只在值写入输出时发生一次：`#set($q = "*$keywords*")` 中，`$keywords` 会在写出 `$q` 时转义，而不是转义两次。如果模板有意把参数中的原始 JSON 直接插入，需要以 `"options": {"content_type": "text/plain"}` 存储该脚本；这会关闭整个脚本的编码，它写出的所有参数都将被原样信任。
 
-**引号由模板负责。** 编码只转义字符，不会添加引号。字符串参数一律加引号（`"$keywords"`），只有数字所在的位置才不加引号（`$minPrice`）。数字请以 JSON 数字传入，像 `size=abc` 这样的值会让请求因解析错误而失败。
+**引号由模板负责。** 编码只转义字符，不会添加引号。字符串参数一律加引号（`"$keywords"`），只有数字所在的位置才不加引号（`$minPrice`）；在那里传入非数字的值（如 `size=abc`）会让请求因解析错误而失败。数组请像示例那样用 `#foreach` 生成：直接写出列表参数（`$ids`）得到的是转义后的字符串，而不是 JSON 数组。
 
 **缺失的参数。** Velocity 会原样写出缺失的引用：`"$keywords"` 会变成字符串 `"$keywords"`，而 mustache 会输出空。使用静默写法 `$!keywords` 可不输出任何内容，或用 `#if($keywords) … #end` 包裹该子句。
 
@@ -164,7 +166,7 @@ script_exception: velocity #foreach iterations exceeded the limit of [100000]; r
 ## 安全
 
 - **模板即代码。** Velocity 是图灵完备的，能存储脚本的人（`PUT _scripts`，需要集群 `manage` 权限）就能决定搜索做什么。请像授予集群管理权限一样谨慎授予。
-- **参数只是数据。** 搜索用户只能提供 `params`。参数值会按上文规则转义，因此只要模板给每个字符串参数都加了引号，参数就无法引入新的字段或子句。
+- **参数只是数据。** 搜索用户只能提供 `params`。参数值会按上文规则转义，因此无论是否加了引号，参数都无法改变查询的结构（添加字段或子句、提前闭合对象、注释掉部分内容）。
 - **沙箱。** 模板运行在 Velocity 的 [`SecureUberspector`](https://velocity.apache.org/engine/2.4/apidocs/org/apache/velocity/util/introspection/SecureUberspector.html) 之下：禁止对 `java.lang.Class`、`ClassLoader`、`Runtime`、`System`、`Thread`、反射等类调用方法，模板无法触达任意 JVM 代码。渲染还受上述[限制](#限制)约束。
 - **Entitlements。** Elasticsearch 9.x 用 entitlements 约束插件。本插件不申请任何权限：没有文件、网络或进程访问。
 
@@ -177,6 +179,7 @@ script_exception: velocity #foreach iterations exceeded the limit of [100000]; r
 - **`#macro` 定义只在所属脚本内有效。** 过去同名宏的第一个定义会被所有模板共享，即使定义它的脚本更新了也不会变。
 - **渲染受到限制：** 输出最多 `1mb`，循环最多 `100000` 次；模板确需更多时可调大[设置](#限制)。
 - 插件不再附带 `plugin-security.policy`，安装时不会再提示旧版安全策略的警告。
+- **自 2.0.1 起**，JSON 编码还会转义 `{ } [ ] ,` 和 `/`（2.0.0 中，不加引号写出的参数可以改变查询结构）。加了引号的值不受影响；直接写出的列表参数（`$ids`）不再渲染为 JSON 数组，请改用 `#foreach` 生成。
 
 ## 性能
 
