@@ -20,10 +20,10 @@ import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
 
 import java.io.Writer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -42,19 +42,15 @@ public class VelocityExecutableScript extends TemplateScript {
         this.maxLoopIterations = maxLoopIterations;
     }
 
-    @SuppressWarnings("removal")
     @Override
     public String execute() {
-        // A fresh context per call, built from a copy of the params: VelocityContext keeps the map by reference, and
-        // templates can #set, so neither the caller's map nor a later execute() may see this run's variables.
-        final VelocityContext velocityContext = new VelocityContext(new HashMap<>(getParams()));
         final SizeLimitingWriter writer = new SizeLimitingWriter(maxOutputSize);
         new RenderScope(encoder, writer, maxLoopIterations).enter();
         try {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                template.merge(velocityContext, writer);
-                return null;
-            });
+            // A fresh context per call, built from a deep copy of the params: VelocityContext keeps the map by reference,
+            // and templates can #set, nested maps included (#set($filter.field = ...)), so neither the caller's params
+            // nor a later execute() may see this run's changes.
+            template.merge(new VelocityContext(copyParams(getParams())), writer);
         } catch (StackOverflowError e) {
             // Don't attach the Error: Elasticsearch halts the node when it finds an Error in a cause chain.
             throw new ScriptException("velocity template nests too deeply to render", new IllegalArgumentException("template nesting exceeded the thread stack"),
@@ -76,6 +72,29 @@ public class VelocityExecutableScript extends TemplateScript {
         return writer.toString();
     }
 
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> copyParams(Map<String, Object> params) {
+        return (Map<String, Object>) deepCopy(params);
+    }
+
+    /**
+     * Copies the Map/List structure that request params are parsed into (keeping iteration order); other values are
+     * shared as they are.
+     */
+    private static Object deepCopy(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<Object, Object> copy = LinkedHashMap.newLinkedHashMap(map.size());
+            map.forEach((key, item) -> copy.put(key, deepCopy(item)));
+            return copy;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> copy = new ArrayList<>(list.size());
+            list.forEach(item -> copy.add(deepCopy(item)));
+            return copy;
+        }
+        return value;
+    }
+
     /**
      * Thrown when a render goes over one of the engine's limits (output size, loop iterations).
      */
@@ -89,19 +108,15 @@ public class VelocityExecutableScript extends TemplateScript {
      * Collects the output and fails once it would grow past the limit, like mustache's {@code SizeLimitingStringWriter}
      * (the limit counts characters).
      */
-    private static final class SizeLimitingWriter extends Writer {
+    static final class SizeLimitingWriter extends Writer {
         private final StringBuilder buffer = new StringBuilder();
         private final int maxSize;
 
-        private SizeLimitingWriter(int maxSize) {
+        SizeLimitingWriter(int maxSize) {
             this.maxSize = maxSize;
         }
 
-        @Override
-        public void write(int c) {
-            ensureRoomFor(1);
-            buffer.append((char) c);
-        }
+        // Writer routes write(int), write(String) and append(...) through the two methods below.
 
         @Override
         public void write(char[] cbuf, int off, int len) {

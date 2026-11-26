@@ -46,13 +46,15 @@ POST _scripts/templateid
         "source": {
             "query": {
                 "match": {
-                    "title": "$query_string"
+                    "title": "$!query_string"
                 }
             }
         }
     }
 }
 ```
+
+> 提示：参数缺失时，Velocity 会原样输出 `$query_string` 这段文本（mustache 则输出空）。使用静默引用 `$!query_string` 可在缺失时不输出任何内容，或用 `#if($query_string)...#end` 包裹可选部分。
 
 ### 获取已存储的脚本
 
@@ -70,7 +72,7 @@ GET _scripts/templateid
   "found": true,
   "script": {
     "lang": "velocity",
-    "source": """{"query":{"match":{"title":"$query_string"}}}""",
+    "source": """{"query":{"match":{"title":"$!query_string"}}}""",
     "options": {
       "content_type": "application/json;charset=utf-8"
     }

@@ -45,13 +45,16 @@ POST _scripts/templateid
         "source": {
             "query": {
                 "match": {
-                    "title": "$query_string"
+                    "title": "$!query_string"
                 }
             }
         }
     }
 }
 ```
+
+> Tip: Velocity writes a missing parameter as the literal text `$query_string` (mustache writes nothing). Use the quiet reference `$!query_string` to write nothing instead, or wrap optional parts in `#if($query_string)...#end`.
+
 ### Get Stored Script
 
 [get-stored-script-api](https://www.elastic.co/guide/en/elasticsearch/reference/current/get-stored-script-api.html)
@@ -68,7 +71,7 @@ GET _scripts/templateid
   "found" : true,
   "script" : {
     "lang" : "velocity",
-    "source" : """{"query":{"match":{"title":"$query_string"}}}""",
+    "source" : """{"query":{"match":{"title":"$!query_string"}}}""",
     "options" : {
       "content_type" : "application/json; charset=UTF-8"
     }

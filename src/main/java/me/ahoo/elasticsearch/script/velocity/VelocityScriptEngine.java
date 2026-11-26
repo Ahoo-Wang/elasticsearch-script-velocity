@@ -29,8 +29,6 @@ import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.TemplateScript;
 
 import java.io.StringReader;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -54,30 +52,31 @@ public class VelocityScriptEngine implements ScriptEngine {
     private final int maxOutputSize;
     private final int maxLoopIterations;
 
-    @SuppressWarnings("removal")
     public VelocityScriptEngine(Settings settings) {
         maxOutputSize = Math.toIntExact(MAX_OUTPUT_SIZE.get(settings).getBytes());
         maxLoopIterations = MAX_LOOP_ITERATIONS.get(settings);
-        runtime = AccessController.doPrivileged((PrivilegedAction<RuntimeInstance>) () -> {
-            final RuntimeInstance instance = new RuntimeInstance();
-            // A SecureUberspector (blocks Class/ClassLoader/Runtime/System/... access) that also enforces the loop limit.
-            instance.setProperty(RuntimeConstants.UBERSPECT_CLASSNAME, LoopLimitingUberspector.class.getName());
-            // Encodes $references per the script's content_type (JSON by default, like mustache); see RenderScope for
-            // why it is registered here rather than on each render's context.
-            instance.setProperty(RuntimeConstants.EVENTHANDLER_REFERENCEINSERTION, EncodingReferenceInsertionHandler.class.getName());
-            // Keep inline #macro definitions local to the template that defines them. Velocity's default registers them in
-            // one engine-wide namespace where the first definition wins, so templates sharing a macro name, or a stored
-            // script whose macro changed, would render another template's macro body.
-            instance.setProperty(RuntimeConstants.VM_PERM_INLINE_LOCAL, "true");
-            // Scripts are parsed straight from their source (see parse()). The only resource loader is a string loader
-            // with a private, always-empty repository, so #parse/#include cannot load other scripts, and Velocity's
-            // default file loader (rooted at the working directory) is not configured.
-            instance.setProperty(RuntimeConstants.RESOURCE_LOADERS, "string");
-            instance.setProperty("resource.loader.string.class", StringResourceLoader.class.getName());
-            instance.setProperty("resource.loader.string.repository.static", "false");
-            instance.init();
-            return instance;
-        });
+        runtime = createRuntime();
+    }
+
+    private static RuntimeInstance createRuntime() {
+        final RuntimeInstance instance = new RuntimeInstance();
+        // A SecureUberspector (blocks Class/ClassLoader/Runtime/System/... access) that also enforces the loop limit.
+        instance.setProperty(RuntimeConstants.UBERSPECT_CLASSNAME, LoopLimitingUberspector.class.getName());
+        // Encodes $references per the script's content_type (JSON by default, like mustache); see RenderScope for
+        // why it is registered here rather than on each render's context.
+        instance.setProperty(RuntimeConstants.EVENTHANDLER_REFERENCEINSERTION, EncodingReferenceInsertionHandler.class.getName());
+        // Keep inline #macro definitions local to the template that defines them. Velocity's default registers them in
+        // one engine-wide namespace where the first definition wins, so templates sharing a macro name, or a stored
+        // script whose macro changed, would render another template's macro body.
+        instance.setProperty(RuntimeConstants.VM_PERM_INLINE_LOCAL, "true");
+        // Scripts are parsed straight from their source (see parse()). The only resource loader is a string loader
+        // with a private, always-empty repository, so #parse/#include cannot load other scripts, and Velocity's
+        // default file loader (rooted at the working directory) is not configured.
+        instance.setProperty(RuntimeConstants.RESOURCE_LOADERS, "string");
+        instance.setProperty("resource.loader.string.class", StringResourceLoader.class.getName());
+        instance.setProperty("resource.loader.string.repository.static", "false");
+        instance.init();
+        return instance;
     }
 
     @Override
