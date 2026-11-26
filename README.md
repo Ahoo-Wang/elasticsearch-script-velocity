@@ -25,17 +25,17 @@ Velocity provides exactly those pieces:
 
 ## Compatibility
 
-Releases are named `<Elasticsearch version>-<plugin version>`, for example `9.5.7-2.0.0`. Elasticsearch only loads a plugin built for its exact version, so pick the [release](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases) whose first part equals your cluster's version. `main` targets Elasticsearch 9.x; older lines are maintained on branches.
+Releases are named `<Elasticsearch version>-<plugin version>`, for example `9.5.7-2.0.1`. Elasticsearch only loads a plugin built for its exact version, so pick the [release](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases) whose first part equals your cluster's version. `main` targets Elasticsearch 9.x; older lines are maintained on branches.
 
 ## Install
 
 On **every** node, then restart the node:
 
 ```shell
-bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v9.5.7-2.0.0/elasticsearch-script-velocity-9.5.7-2.0.0.zip
+bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v9.5.7-2.0.1/elasticsearch-script-velocity-9.5.7-2.0.1.zip
 ```
 
-Replace both occurrences of `9.5.7-2.0.0` with the release that matches your cluster. Without network access, download the zip and install it with `file:///path/to/elasticsearch-script-velocity-<version>.zip`. Check the result with `GET _cat/plugins`.
+Replace both occurrences of `9.5.7-2.0.1` with the release that matches your cluster. Without network access, download the zip and install it with `file:///path/to/elasticsearch-script-velocity-<version>.zip`. Check the result with `GET _cat/plugins`.
 
 ## Use
 

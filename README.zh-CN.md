@@ -25,17 +25,17 @@ Velocity 正好补上这些能力：
 
 ## 版本兼容
 
-发布版本命名为 `<Elasticsearch 版本>-<插件版本>`，例如 `9.5.7-2.0.0`。Elasticsearch 只加载为其精确版本构建的插件，因此请选择前半部分与集群版本完全一致的 [Release](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)。`main` 分支面向 Elasticsearch 9.x，更早的版本线在其他分支维护。
+发布版本命名为 `<Elasticsearch 版本>-<插件版本>`，例如 `9.5.7-2.0.1`。Elasticsearch 只加载为其精确版本构建的插件，因此请选择前半部分与集群版本完全一致的 [Release](https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases)。`main` 分支面向 Elasticsearch 9.x，更早的版本线在其他分支维护。
 
 ## 安装
 
 在**每个**节点上执行，然后重启该节点：
 
 ```shell
-bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v9.5.7-2.0.0/elasticsearch-script-velocity-9.5.7-2.0.0.zip
+bin/elasticsearch-plugin install https://github.com/Ahoo-Wang/elasticsearch-script-velocity/releases/download/v9.5.7-2.0.1/elasticsearch-script-velocity-9.5.7-2.0.1.zip
 ```
 
-把两处 `9.5.7-2.0.0` 替换成与集群匹配的版本。无法联网时，先下载 zip，再用 `file:///path/to/elasticsearch-script-velocity-<version>.zip` 安装。安装结果可用 `GET _cat/plugins` 查看。
+把两处 `9.5.7-2.0.1` 替换成与集群匹配的版本。无法联网时，先下载 zip，再用 `file:///path/to/elasticsearch-script-velocity-<version>.zip` 安装。安装结果可用 `GET _cat/plugins` 查看。
 
 ## 使用
 
